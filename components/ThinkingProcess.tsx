@@ -30,9 +30,9 @@ const ThinkingProcess: React.FC<ThinkingProcessProps> = ({ steps }) => {
 
   const getAgentColor = (agent: AgentType) => {
     switch (agent) {
-      case AgentType.LOGIC_ANALYST: return "border-blue-500/30 bg-blue-500/5 text-blue-400";
-      case AgentType.PHILOSOPHY_EXPERT: return "border-purple-500/30 bg-purple-500/5 text-purple-400";
-      default: return "border-gray-700 bg-gray-800/50 text-gray-400";
+      case AgentType.LOGIC_ANALYST: return "border-blue-200 bg-blue-50 text-blue-800";
+      case AgentType.PHILOSOPHY_EXPERT: return "border-purple-200 bg-purple-50 text-purple-800";
+      default: return "border-zinc-200 bg-zinc-50 text-zinc-600";
     }
   };
 
@@ -44,7 +44,7 @@ const ThinkingProcess: React.FC<ThinkingProcessProps> = ({ steps }) => {
             {getAgentIcon(step.agent)}
             <span>{getAgentLabel(step.agent)}</span>
           </div>
-          <div className="text-sm leading-relaxed font-light italic prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-black/50">
+          <div className="text-sm leading-relaxed font-light italic prose prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-zinc-100">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {step.content}
             </ReactMarkdown>
