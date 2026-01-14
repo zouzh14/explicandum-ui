@@ -1,0 +1,5 @@
+{
+  "name": "Explicandum",
+  "description": "A sophisticated reasoning interface for philosophical and logical analysis. Features a multi-agent system (Logic Analyst and Philosophy Expert) to decompose complex arguments and provide scientific philosophy context.",
+  "requestFramePermissions": []
+}

@@ -1,0 +1,9 @@
+services:
+  ui:
+    build: .
+    ports:
+      - "3000:80"
+    restart: always
+
+# This assumes the backend is running elsewhere or via its own compose.
+# If they are in the same network, you can use container name as host.
