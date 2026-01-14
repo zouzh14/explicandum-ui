@@ -4,7 +4,9 @@ import { Message, ChatSession, User, AppState, PhilosophicalStance, FileAttachme
 import { Icons } from './constants';
 import MessageBubble from './components/MessageBubble';
 import AdminDashboard from './components/AdminDashboard';
-import { streamExplicandumResponse, extractPhilosophicalStance } from './services/geminiService';
+import ThoughtLibrary from './components/ThoughtLibrary';
+import UserProfile from './components/UserProfile';
+import { streamExplicandumResponse, extractPhilosophicalStance, deletePhilosophicalStance, deleteChatSession } from './services/geminiService';
 import { vectorStore, pgDb } from './services/dbService';
 
 const ANONYMOUS_LIMIT = 3;
@@ -152,6 +154,44 @@ const App: React.FC = () => {
     setAppState(prev => ({ ...prev, currentUser: null, activeSessionId: null, status: 'idle' }));
   };
 
+  const handleDeleteSession = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    // Optimistic UI update
+    setAppState(prev => {
+      const newSessions = prev.sessions.filter(s => s.id !== id);
+      const newActiveId = prev.activeSessionId === id 
+        ? (newSessions.length > 0 ? newSessions[0].id : null)
+        : prev.activeSessionId;
+      return {
+        ...prev,
+        sessions: newSessions,
+        activeSessionId: newActiveId
+      };
+    });
+    // Backend call
+    await deleteChatSession(id);
+  };
+
+  const handleDeleteStance = async (id: string) => {
+    // Optimistic UI update
+    setAppState(prev => ({
+      ...prev,
+      personalPhilosophyLibrary: prev.personalPhilosophyLibrary.filter(s => s.id !== id)
+    }));
+    // Backend call
+    await deletePhilosophicalStance(id);
+  };
+
+  const handleDeleteAccount = () => {
+    setAppState(prev => ({
+      ...prev,
+      registeredUsers: prev.registeredUsers.filter(u => u.id !== prev.currentUser?.id),
+      currentUser: null,
+      activeSessionId: null,
+      status: 'idle'
+    }));
+  };
+
   // Fix: Added handleUpdateUser to manage user updates from the AdminDashboard
   const handleUpdateUser = (userId: string, updates: Partial<User>) => {
     setAppState(prev => ({
@@ -167,7 +207,7 @@ const App: React.FC = () => {
     const files = e.target.files;
     if (!files) return;
     setAppState(prev => ({ ...prev, status: 'indexing' }));
-    Array.from(files).forEach(file => {
+    Array.from(files).forEach((file: File) => {
       const reader = new FileReader();
       reader.onload = async (event) => {
         const text = event.target?.result as string;
@@ -243,7 +283,7 @@ const App: React.FC = () => {
     }
 
     const personalContext = activeSession.personalLibraryEnabled ? appState.personalPhilosophyLibrary.map(s => s.view) : [];
-    await streamExplicandumResponse(currentInput, personalContext, retrievedChunks, (chunk) => {
+    await streamExplicandumResponse(currentInput, personalContext, retrievedChunks, activeSession.id, (chunk) => {
       setAppState(prev => ({
         ...prev,
         sessions: prev.sessions.map(s => s.id === prev.activeSessionId ? {
@@ -317,23 +357,33 @@ const App: React.FC = () => {
           <Icons.Plus /> <span className="text-sm font-medium">New Thread</span>
         </button>
 
-        <div className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar space-y-6">
+        <div className="flex-1 flex flex-col min-h-0 space-y-2">
           {/* Section 1: History */}
-          <section>
-            <div className="flex items-center gap-2 mb-2 px-1">
+          <section className="flex-[1.5] flex flex-col min-h-0">
+            <div className="flex items-center gap-2 mb-2 px-1 flex-shrink-0">
               <Icons.History /><h2 className="text-[10px] uppercase text-zinc-500 font-bold tracking-widest">History</h2>
             </div>
-            <div className="space-y-1">
+            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1 pr-1">
               {appState.sessions.map(s => (
-                <button key={s.id} onClick={() => setAppState(prev => ({ ...prev, activeSessionId: s.id, status: 'idle' }))} className={`w-full text-left p-2.5 rounded-lg text-xs transition-all ${appState.activeSessionId === s.id && appState.status !== 'admin' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-400'}`}>
-                  <div className="truncate">{s.title}</div>
+                <button 
+                  key={s.id} 
+                  onClick={() => setAppState(prev => ({ ...prev, activeSessionId: s.id, status: 'idle' }))} 
+                  className={`group w-full flex items-center justify-between p-2.5 rounded-lg text-xs transition-all ${appState.activeSessionId === s.id && appState.status !== 'admin' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-400'}`}
+                >
+                  <div className="truncate flex-1 text-left">{s.title}</div>
+                  <div 
+                    onClick={(e) => handleDeleteSession(e, s.id)}
+                    className={`ml-2 p-1 rounded hover:bg-red-500/20 text-zinc-600 hover:text-red-400 transition-all ${appState.activeSessionId === s.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                  >
+                    <Icons.Trash />
+                  </div>
                 </button>
               ))}
             </div>
           </section>
 
-          {/* Section 2: Cognitive Controls (RESTORED) */}
-          <section className="pt-4 border-t border-zinc-900">
+          {/* Section 2: Cognitive Controls (STABLE HEIGHT) */}
+          <section className="flex-shrink-0 pt-4 border-t border-zinc-900">
             <h2 className="text-[10px] uppercase text-zinc-500 font-bold tracking-widest mb-3 px-1">Cognitive Context</h2>
             <div className="space-y-2">
               <button onClick={() => setRagEnabled(!ragEnabled)} className={`w-full flex items-center justify-between p-2 rounded-lg border transition-all ${ragEnabled ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' : 'bg-zinc-900 border-zinc-800 text-zinc-600'}`}>
@@ -350,13 +400,13 @@ const App: React.FC = () => {
             </div>
           </section>
 
-          {/* Section 3: Knowledge Store (RESTORED LIST) */}
-          <section className="pt-4 border-t border-zinc-900">
-             <div className="flex items-center justify-between mb-2 px-1">
+          {/* Section 3: Knowledge Store */}
+          <section className="flex-1 flex flex-col min-h-0 pt-4 border-t border-zinc-900">
+             <div className="flex items-center justify-between mb-2 px-1 flex-shrink-0">
                 <h2 className="text-[10px] uppercase text-zinc-500 font-bold tracking-widest">Knowledge Base</h2>
                 <button onClick={() => fileInputRef.current?.click()} className="text-zinc-500 hover:text-white transition-colors"><Icons.Plus /></button>
              </div>
-             <div className="space-y-1.5 max-h-32 overflow-y-auto custom-scrollbar">
+             <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1.5 pr-1">
                 {appState.fileLibrary.map(f => (
                   <div key={f.id} className="flex items-center justify-between bg-zinc-900/40 p-1.5 rounded-lg border border-zinc-900">
                     <span className="text-[9px] text-zinc-400 truncate flex items-center gap-1.5"><Icons.Document /> {f.name}</span>
@@ -366,24 +416,30 @@ const App: React.FC = () => {
              </div>
           </section>
 
-          {/* Section 4: Personal Philosophy (NEW LIST) */}
-          <section className="pt-4 border-t border-zinc-900">
+          {/* Section 4: Personal Philosophy */}
+          <section className="flex-shrink-0 pt-4 border-t border-zinc-900">
             <h2 className="text-[10px] uppercase text-zinc-500 font-bold tracking-widest mb-2 px-1">Thought Library</h2>
-            <div className="space-y-2 max-h-40 overflow-y-auto custom-scrollbar pr-1">
-               {appState.personalPhilosophyLibrary.map(st => (
-                 <div key={st.id} className="p-2 bg-zinc-900/20 border border-zinc-900 rounded-lg text-[10px] text-zinc-400 italic leading-relaxed">
-                   "{st.view}"
-                 </div>
-               ))}
-               {appState.personalPhilosophyLibrary.length === 0 && <div className="text-[9px] text-zinc-700 italic px-1">No stances extracted yet.</div>}
-            </div>
+            <button 
+              onClick={() => setAppState(prev => ({ ...prev, status: 'library' }))}
+              className="w-full flex items-center justify-between p-3 rounded-xl bg-zinc-900/50 border border-zinc-800 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all group"
+            >
+              <div className="flex items-center gap-2 text-[10px] font-bold">
+                <Icons.Scroll /> 
+                <span>View Stance Archive</span>
+              </div>
+              <span className="text-[9px] bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-500 group-hover:text-zinc-300 transition-colors">
+                {appState.personalPhilosophyLibrary.length}
+              </span>
+            </button>
           </section>
 
           {/* Section 5: Admin */}
           {appState.currentUser?.role === 'admin' && (
-             <button onClick={() => setAppState(prev => ({ ...prev, status: 'admin' }))} className={`w-full flex items-center gap-3 p-3 rounded-xl text-xs font-bold transition-all border ${appState.status === 'admin' ? 'bg-white text-black border-white' : 'text-zinc-400 hover:bg-zinc-900 border-zinc-900'}`}>
-               <Icons.Lock /> <span>Admin Backend</span>
-             </button>
+             <div className="flex-shrink-0 pt-2">
+               <button onClick={() => setAppState(prev => ({ ...prev, status: 'admin' }))} className={`w-full flex items-center gap-3 p-3 rounded-xl text-xs font-bold transition-all border ${appState.status === 'admin' ? 'bg-white text-black border-white' : 'text-zinc-400 hover:bg-zinc-900 border-zinc-900'}`}>
+                 <Icons.Lock /> <span>Admin Backend</span>
+               </button>
+             </div>
           )}
         </div>
 
@@ -399,18 +455,38 @@ const App: React.FC = () => {
         </div>
 
         {/* Profile */}
-        <div className="mt-4 pt-4 border-t border-zinc-900 flex items-center justify-between">
-          <div className="flex items-center gap-2 truncate">
-            <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] text-zinc-500 font-bold">{appState.currentUser.username[0]}</div>
-            <div className="truncate text-[10px] font-bold text-zinc-400">{appState.currentUser.username}</div>
-          </div>
-          <button onClick={handleLogout} className="text-zinc-700 hover:text-white transition-colors"><Icons.Logout /></button>
+        <div className="mt-4 pt-4 border-t border-zinc-900 flex items-center gap-1">
+          <button 
+            onClick={() => setAppState(prev => ({ ...prev, status: 'profile' }))}
+            className={`flex-1 flex items-center justify-between p-2 rounded-xl transition-all ${appState.status === 'profile' ? 'bg-zinc-800 ring-1 ring-zinc-700' : 'hover:bg-zinc-900'}`}
+          >
+            <div className="flex items-center gap-2 truncate">
+              <div className="w-7 h-7 flex-shrink-0 rounded-lg bg-white flex items-center justify-center text-[11px] text-black font-bold shadow-sm">{appState.currentUser.username[0].toUpperCase()}</div>
+              <div className="truncate text-[11px] font-bold text-zinc-300">{appState.currentUser.username}</div>
+            </div>
+            <div className="text-zinc-600 group-hover:text-zinc-400">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+              </svg>
+            </div>
+          </button>
+          <button 
+            onClick={handleLogout}
+            className="p-2 text-zinc-700 hover:text-white hover:bg-zinc-900 rounded-xl transition-all"
+            title="Sign Out"
+          >
+            <Icons.Logout />
+          </button>
         </div>
       </div>
 
       {/* Main Content */}
       {appState.status === 'admin' ? (
         <AdminDashboard state={appState} onClose={() => setAppState(prev => ({ ...prev, status: 'idle' }))} onUpdateUser={handleUpdateUser} />
+      ) : appState.status === 'library' ? (
+        <ThoughtLibrary state={appState} onClose={() => setAppState(prev => ({ ...prev, status: 'idle' }))} onDeleteStance={handleDeleteStance} />
+      ) : appState.status === 'profile' ? (
+        <UserProfile user={appState.currentUser!} onClose={() => setAppState(prev => ({ ...prev, status: 'idle' }))} onDeleteAccount={handleDeleteAccount} />
       ) : (
         <div className="flex-1 flex flex-col relative bg-black">
           <header className="flex items-center justify-between p-4 border-b border-zinc-900 bg-black/80 backdrop-blur-md sticky top-0 z-20">

@@ -1,5 +1,7 @@
 
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Message, AgentType, ThinkingStep } from '../types';
 import ThinkingProcess from './ThinkingProcess';
 import { Icons } from '../constants';
@@ -58,20 +60,18 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, allFiles = [] })
             ? 'bg-zinc-100 text-zinc-900 font-medium' 
             : 'bg-zinc-900 border border-zinc-800 text-zinc-300'
         }`}>
-          <div className="text-sm md:text-base leading-relaxed whitespace-pre-wrap">
-            {displayContent || (message.isStreaming && !steps.length ? 'Explicandum is processing...' : displayContent)}
+          <div className="text-sm md:text-base leading-relaxed prose prose-invert prose-sm max-w-none">
+            {displayContent ? (
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {displayContent}
+              </ReactMarkdown>
+            ) : (
+              message.isStreaming && !steps.length ? 'Explicandum is processing...' : null
+            )}
           </div>
 
-          {(message.ragSources || attachedFiles.length > 0 || message.tokensConsumed) && (
+          {(message.ragSources || attachedFiles.length > 0) && (
             <div className="mt-4 pt-3 border-t border-zinc-800 flex flex-wrap gap-2 items-center">
-              <span className="text-[10px] text-zinc-500 uppercase font-bold mr-1">Context:</span>
-              
-              {message.tokensConsumed && (
-                <span className="bg-zinc-800 text-zinc-500 text-[9px] px-2 py-0.5 rounded border border-zinc-700 font-mono">
-                  {message.tokensConsumed} TOKENS
-                </span>
-              )}
-
               {message.ragSources?.map((s, i) => (
                 <span key={i} className="bg-zinc-800 text-zinc-400 text-[9px] px-2 py-0.5 rounded border border-zinc-700">{s}</span>
               ))}

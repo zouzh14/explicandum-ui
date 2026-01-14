@@ -18,10 +18,35 @@ export const extractPhilosophicalStance = async (message: string): Promise<strin
   }
 };
 
+export const deletePhilosophicalStance = async (stanceId: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/stances/${stanceId}`, {
+      method: 'DELETE',
+    });
+    return response.ok;
+  } catch (error) {
+    console.error("Deletion Error:", error);
+    return false;
+  }
+};
+
+export const deleteChatSession = async (sessionId: string): Promise<boolean> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}`, {
+      method: 'DELETE',
+    });
+    return response.ok;
+  } catch (error) {
+    console.error("Session Deletion Error:", error);
+    return false;
+  }
+};
+
 export const streamExplicandumResponse = async (
   message: string,
   personalContext: string[],
   retrievedChunks: VectorChunk[],
+  threadId: string,
   onChunk: (text: string) => void
 ) => {
   try {
@@ -32,6 +57,7 @@ export const streamExplicandumResponse = async (
         message,
         personalContext,
         retrievedChunks,
+        threadId,
         sessionHistory: [] // To be implemented if needed
       })
     });

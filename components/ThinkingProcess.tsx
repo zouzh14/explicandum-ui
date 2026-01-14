@@ -1,5 +1,7 @@
 
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { AgentType, ThinkingStep } from '../types';
 import { Icons } from '../constants';
 
@@ -42,8 +44,10 @@ const ThinkingProcess: React.FC<ThinkingProcessProps> = ({ steps }) => {
             {getAgentIcon(step.agent)}
             <span>{getAgentLabel(step.agent)}</span>
           </div>
-          <div className="text-sm leading-relaxed whitespace-pre-wrap font-light italic">
-            {step.content}
+          <div className="text-sm leading-relaxed font-light italic prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-black/50">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {step.content}
+            </ReactMarkdown>
           </div>
         </div>
       ))}
