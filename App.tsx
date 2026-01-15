@@ -6,6 +6,7 @@ import MessageBubble from './components/MessageBubble';
 import AdminDashboard from './components/AdminDashboard';
 import ThoughtLibrary from './components/ThoughtLibrary';
 import UserProfile from './components/UserProfile';
+import FileManager from './components/FileManager';
 import { streamExplicandumResponse, extractPhilosophicalStance, deletePhilosophicalStance, deleteChatSession } from './services/geminiService';
 import { vectorStore, pgDb } from './services/dbService';
 
@@ -498,19 +499,23 @@ const App: React.FC = () => {
           </section>
 
           {/* Section 3: Knowledge Store */}
-          <section className="flex-1 flex flex-col min-h-0 pt-4 border-t border-zinc-200">
+          <section className="flex-shrink-0 pt-4 border-t border-zinc-200">
              <div className="flex items-center justify-between mb-2 px-1 flex-shrink-0">
                 <h2 className="text-[10px] uppercase text-zinc-400 font-bold tracking-widest">Knowledge Base</h2>
-                <button onClick={() => fileInputRef.current?.click()} className="text-zinc-400 hover:text-zinc-900 transition-colors"><Icons.Plus /></button>
+                <button onClick={() => fileInputRef.current?.click()} className="text-zinc-400 hover:text-zinc-900 transition-colors" title="Upload Files"><Icons.Plus /></button>
              </div>
-             <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1.5 pr-1">
-                {appState.fileLibrary.map(f => (
-                  <div key={f.id} className="flex items-center justify-between bg-white p-1.5 rounded-lg border border-zinc-100 shadow-sm">
-                    <span className="text-[9px] text-zinc-600 truncate flex items-center gap-1.5"><Icons.Document /> {f.name}</span>
-                    <button onClick={() => setAppState(prev => ({ ...prev, fileLibrary: prev.fileLibrary.filter(x => x.id !== f.id), vectorStore: prev.vectorStore.filter(v => v.fileId !== f.id) }))} className="text-zinc-300 hover:text-red-500"><Icons.Trash /></button>
-                  </div>
-                ))}
-             </div>
+             <button 
+                onClick={() => setAppState(prev => ({ ...prev, status: 'files' }))}
+                className="w-full flex items-center justify-between p-3 rounded-xl bg-white border border-zinc-200 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 transition-all group shadow-sm"
+              >
+                <div className="flex items-center gap-2 text-[10px] font-bold">
+                  <Icons.Database /> 
+                  <span>Manage Knowledge</span>
+                </div>
+                <span className="text-[9px] bg-zinc-100 px-1.5 py-0.5 rounded text-zinc-400 group-hover:text-zinc-600 transition-colors">
+                  {appState.fileLibrary.length}
+                </span>
+              </button>
           </section>
 
           {/* Section 4: Personal Philosophy */}
@@ -582,6 +587,12 @@ const App: React.FC = () => {
         <AdminDashboard state={appState} onClose={() => setAppState(prev => ({ ...prev, status: 'idle' }))} onUpdateUser={handleUpdateUser} />
       ) : appState.status === 'library' ? (
         <ThoughtLibrary state={appState} onClose={() => setAppState(prev => ({ ...prev, status: 'idle' }))} onDeleteStance={handleDeleteStance} />
+      ) : appState.status === 'files' ? (
+        <FileManager 
+          state={appState} 
+          onClose={() => setAppState(prev => ({ ...prev, status: 'idle' }))} 
+          onDeleteFile={(id) => setAppState(prev => ({ ...prev, fileLibrary: prev.fileLibrary.filter(x => x.id !== id), vectorStore: prev.vectorStore.filter(v => v.fileId !== id) }))} 
+        />
       ) : appState.status === 'profile' ? (
         <UserProfile user={appState.currentUser!} onClose={() => setAppState(prev => ({ ...prev, status: 'idle' }))} onDeleteAccount={handleDeleteAccount} />
       ) : (

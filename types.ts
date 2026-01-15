@@ -91,7 +91,7 @@ export interface AppState {
   personalPhilosophyLibrary: PhilosophicalStance[];
   fileLibrary: FileAttachment[];
   vectorStore: VectorChunk[]; 
-  status: 'idle' | 'busy' | 'indexing' | 'admin' | 'library' | 'profile'; // Added admin status
+  status: 'idle' | 'busy' | 'indexing' | 'admin' | 'library' | 'profile' | 'files'; // Added files status
   registeredUsers: User[];
   ipRegistry: IpRegistry;
 }
