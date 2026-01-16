@@ -30,21 +30,21 @@ const ThinkingProcess: React.FC<ThinkingProcessProps> = ({ steps }) => {
 
   const getAgentColor = (agent: AgentType) => {
     switch (agent) {
-      case AgentType.LOGIC_ANALYST: return "border-blue-200 bg-blue-50 text-blue-800";
-      case AgentType.PHILOSOPHY_EXPERT: return "border-purple-200 bg-purple-50 text-purple-800";
-      default: return "border-zinc-200 bg-zinc-50 text-zinc-600";
+      case AgentType.LOGIC_ANALYST: return "text-zinc-600 border-l-2 border-zinc-200";
+      case AgentType.PHILOSOPHY_EXPERT: return "text-zinc-600 border-l-2 border-zinc-200";
+      default: return "text-zinc-600 border-l-2 border-zinc-200";
     }
   };
 
   return (
-    <div className="flex flex-col gap-3 my-4">
+    <div className="flex flex-col gap-4 my-4">
       {steps.map((step, idx) => (
-        <div key={idx} className={`border rounded-lg p-3 transition-all duration-300 animate-in fade-in slide-in-from-bottom-2 ${getAgentColor(step.agent)}`}>
-          <div className="flex items-center gap-2 mb-2 font-semibold text-xs uppercase tracking-wider">
+        <div key={idx} className={`pl-4 ${getAgentColor(step.agent)}`}>
+          <div className="flex items-center gap-2 mb-1.5 font-bold text-[10px] uppercase tracking-widest opacity-50">
             {getAgentIcon(step.agent)}
             <span>{getAgentLabel(step.agent)}</span>
           </div>
-          <div className="text-sm leading-relaxed font-light italic prose prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-zinc-100">
+          <div className="text-sm leading-[1.8] text-zinc-500 prose prose-sm max-w-none prose-p:leading-[1.8] prose-zinc">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {step.content}
             </ReactMarkdown>

@@ -2,14 +2,17 @@
 import React from 'react';
 import { User, AppState } from '../types';
 import { Icons } from '../constants';
+import { Language, translations } from '../i18n';
 
 interface UserProfileProps {
   user: User;
+  language: Language;
   onClose: () => void;
   onDeleteAccount: () => void;
 }
 
-const UserProfile: React.FC<UserProfileProps> = ({ user, onClose, onDeleteAccount }) => {
+const UserProfile: React.FC<UserProfileProps> = ({ user, language, onClose, onDeleteAccount }) => {
+  const t = translations[language];
   const joinDate = new Date(user.createdAt).toLocaleDateString();
   const usagePercentage = Math.round((user.tokensUsed / user.tokenQuota) * 100);
 
@@ -23,8 +26,8 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onClose, onDeleteAccoun
              </svg>
           </button>
           <div>
-            <h1 className="text-xl font-bold text-zinc-900 tracking-tight">Investigator Profile</h1>
-            <p className="text-zinc-400 text-xs uppercase tracking-widest font-medium">Node Authorization & Resource Management</p>
+            <h1 className="text-xl font-bold text-zinc-900 tracking-tight">{t.userProfile}</h1>
+            <p className="text-zinc-400 text-xs uppercase tracking-widest font-medium">{t.accountDetails}</p>
           </div>
         </div>
       </header>
@@ -41,7 +44,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onClose, onDeleteAccoun
                    <h2 className="text-2xl font-bold text-zinc-900 mb-1">{user.username}</h2>
                    <div className="flex items-center gap-2">
                       <span className="px-2 py-0.5 bg-blue-50 text-blue-600 text-[10px] font-bold uppercase rounded border border-blue-100">{user.role}</span>
-                      <span className="text-zinc-400 text-[10px] font-medium uppercase tracking-wider">Joined {joinDate}</span>
+                      <span className="text-zinc-400 text-[10px] font-medium uppercase tracking-wider">{t.registeredOn} {joinDate}</span>
                    </div>
                 </div>
              </div>
@@ -52,7 +55,7 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onClose, onDeleteAccoun
 
           {/* Resource Usage */}
           <div className="space-y-4">
-            <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-[0.2em] ml-2">Neural Link Resources</h3>
+            <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-[0.2em] ml-2">{t.resourceUsage}</h3>
             <div className="p-6 bg-white border border-zinc-200 rounded-3xl space-y-6 shadow-sm">
                <div className="flex justify-between items-end">
                   <div>
@@ -84,13 +87,13 @@ const UserProfile: React.FC<UserProfileProps> = ({ user, onClose, onDeleteAccoun
           <div className="pt-8 border-t border-zinc-100">
              <button 
                onClick={() => {
-                 if (window.confirm("CRITICAL WARNING: This will permanently delete your investigator account and all associated encrypted records from this node. This action cannot be undone. Proceed with account termination?")) {
+                 if (window.confirm(language === 'zh' ? '警告：此操作将永久注销您的账户。所有加密记录和立场都将被清除且无法恢复。确定继续吗？' : "CRITICAL WARNING: This will permanently delete your investigator account and all associated encrypted records from this node. This action cannot be undone. Proceed with account termination?")) {
                    onDeleteAccount();
                  }
                }}
                className="w-full flex items-center justify-center gap-3 py-4 rounded-2xl bg-red-50 text-red-600 border border-red-100 font-bold text-sm hover:bg-red-600 hover:text-white transition-all shadow-sm"
              >
-               <Icons.Trash /> Permanently Delete Account
+               <Icons.Trash /> {t.deleteAccount}
              </button>
              <p className="text-center text-[10px] text-zinc-400 mt-6 uppercase tracking-widest leading-relaxed">
                Account termination will wipe all neural link data for this investigator. <br/>

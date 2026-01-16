@@ -2,11 +2,13 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Message, ChatSession, User, AppState, PhilosophicalStance, FileAttachment, IpRegistry, VectorChunk } from './types';
 import { Icons } from './constants';
+import { translations } from './i18n';
 import MessageBubble from './components/MessageBubble';
 import AdminDashboard from './components/AdminDashboard';
 import ThoughtLibrary from './components/ThoughtLibrary';
 import UserProfile from './components/UserProfile';
 import FileManager from './components/FileManager';
+import KnowledgeSidebar from './components/KnowledgeSidebar';
 import { streamExplicandumResponse, extractPhilosophicalStance, deletePhilosophicalStance, deleteChatSession } from './services/geminiService';
 import { vectorStore, pgDb } from './services/dbService';
 
@@ -19,8 +21,26 @@ const App: React.FC = () => {
   const [appState, setAppState] = useState<AppState>(() => {
     const saved = localStorage.getItem('explicandum_state_v8');
     if (saved) {
-      const parsed = JSON.parse(saved);
-      return { ...parsed, status: 'idle' };
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          return { 
+            ...parsed, 
+            status: 'idle',
+            language: (parsed.language === 'en' || parsed.language === 'zh') ? parsed.language : 'en',
+            rightSidebarOpen: parsed.rightSidebarOpen !== undefined ? !!parsed.rightSidebarOpen : true,
+            leftToolsCollapsed: parsed.leftToolsCollapsed !== undefined ? !!parsed.leftToolsCollapsed : false,
+            registeredUsers: Array.isArray(parsed.registeredUsers) ? parsed.registeredUsers : [],
+            sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
+            personalPhilosophyLibrary: Array.isArray(parsed.personalPhilosophyLibrary) ? parsed.personalPhilosophyLibrary : [],
+            fileLibrary: Array.isArray(parsed.fileLibrary) ? parsed.fileLibrary : [],
+            vectorStore: Array.isArray(parsed.vectorStore) ? parsed.vectorStore : [],
+            ipRegistry: parsed.ipRegistry || {}
+          };
+        }
+      } catch (e) {
+        console.error("Failed to parse saved state", e);
+      }
     }
     
     const systemAdmin: User = {
@@ -46,7 +66,10 @@ const App: React.FC = () => {
       vectorStore: [],
       status: 'idle',
       registeredUsers: [systemAdmin],
-      ipRegistry: {}
+      ipRegistry: {},
+      rightSidebarOpen: true,
+      leftToolsCollapsed: false,
+      language: 'en'
     };
   });
 
@@ -97,6 +120,8 @@ const App: React.FC = () => {
   const activeSession = useMemo(() => {
     return appState.sessions.find(s => s.id === appState.activeSessionId) || null;
   }, [appState.sessions, appState.activeSessionId]);
+
+  const t = translations[appState.language];
 
   const scrollToBottom = () => {
     if (scrollRef.current) {
@@ -375,37 +400,41 @@ const App: React.FC = () => {
             <div className="w-16 h-16 bg-zinc-900 rounded-2xl flex items-center justify-center text-white shadow-lg mb-4"><Icons.Library /></div>
             <h1 className="text-3xl font-bold tracking-tight text-zinc-900 mb-2">Explicandum</h1>
             <p className="text-zinc-500 text-sm text-center font-medium italic">Reasoning & Persistence Engine</p>
+            <div className="mt-4 flex gap-1 p-1 bg-zinc-100 rounded-lg">
+              <button onClick={() => setAppState(prev => ({ ...prev, language: 'en' }))} className={`px-2 py-0.5 text-[9px] font-bold rounded ${appState.language === 'en' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-400'}`}>EN</button>
+              <button onClick={() => setAppState(prev => ({ ...prev, language: 'zh' }))} className={`px-2 py-0.5 text-[9px] font-bold rounded ${appState.language === 'zh' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-400'}`}>中</button>
+            </div>
           </div>
           <div className="flex p-1 bg-zinc-100 rounded-xl mb-6">
             {['login', 'register', 'guest'].map((m) => (
-              <button key={m} onClick={() => setAuthMode(m as any)} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${authMode === m ? 'bg-white text-zinc-900 shadow' : 'text-zinc-400 hover:text-zinc-600'}`}>{m.toUpperCase()}</button>
+              <button key={m} onClick={() => setAuthMode(m as any)} className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${authMode === m ? 'bg-white text-zinc-900 shadow' : 'text-zinc-400 hover:text-zinc-600'}`}>{(t as any)[m].toUpperCase()}</button>
             ))}
           </div>
           <div className="space-y-4">
-            <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm text-zinc-900" placeholder="Username" />
+            <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm text-zinc-900" placeholder={t.username} />
             
             {authMode === 'register' && (
               <>
                 <div className="flex gap-2">
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="flex-1 bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm text-zinc-900" placeholder="Institutional or Personal Email" />
+                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="flex-1 bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm text-zinc-900" placeholder={t.email} />
                   <button 
                     disabled={countdown > 0 || isSendingCode}
                     onClick={handleSendCode}
                     className="px-4 bg-zinc-900 text-white rounded-xl text-[10px] font-bold disabled:opacity-50 transition-all hover:bg-black whitespace-nowrap"
                   >
-                    {countdown > 0 ? `${countdown}s` : (isSendingCode ? '...' : 'GET CODE')}
+                    {countdown > 0 ? `${countdown}s` : (isSendingCode ? '...' : t.getCode)}
                   </button>
                 </div>
-                <input type="text" value={verificationCode} onChange={(e) => setVerificationCode(e.target.value)} className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm text-zinc-900" placeholder="6-Digit Verification Code" />
+                <input type="text" value={verificationCode} onChange={(e) => setVerificationCode(e.target.value)} className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm text-zinc-900" placeholder={t.verificationCode} />
               </>
             )}
 
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm text-zinc-900" placeholder="Password" />
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-4 py-3 text-sm text-zinc-900" placeholder={t.password} />
             
-            {authError && <div className="text-red-500 text-[10px] font-bold bg-red-50 p-2 rounded-lg text-center border border-red-100">{authError}</div>}
+            {authError && <div className="text-red-500 text-[10px] font-bold bg-red-50 p-2 rounded-lg text-center border border-red-100">{(t as any)[authError] || authError}</div>}
             
             <button onClick={handleAuthAction} className="w-full bg-zinc-900 text-white py-3 rounded-xl font-bold text-sm hover:bg-black transition-all shadow-md">
-              {authMode === 'register' ? 'Verify & Join Research' : 'Start Investigation'}
+              {authMode === 'register' ? t.verifyAndJoin : t.startInvestigation}
             </button>
           </div>
         </div>
@@ -424,19 +453,19 @@ const App: React.FC = () => {
 
         <button 
           onClick={() => {
-            const newS: ChatSession = { id: 's_'+Date.now(), title: 'New Investigation', messages: [{ id: 'w', role: 'assistant', content: 'Final Answer: System ready.' }], createdAt: Date.now(), lastActive: Date.now(), personalLibraryEnabled: true, activeFileIds: [] };
+            const newS: ChatSession = { id: 's_'+Date.now(), title: appState.language === 'zh' ? '新调查' : 'New Investigation', messages: [{ id: 'w', role: 'assistant', content: 'Final Answer: System ready.' }], createdAt: Date.now(), lastActive: Date.now(), personalLibraryEnabled: true, activeFileIds: [] };
             setAppState(prev => ({ ...prev, sessions: [newS, ...prev.sessions], activeSessionId: newS.id, status: 'idle' }));
           }} 
           className="w-full flex items-center justify-center gap-2 py-2 px-4 mb-6 rounded-xl bg-white text-zinc-900 hover:bg-zinc-100 transition-all border border-zinc-200 shadow-sm"
         >
-          <Icons.Plus /> <span className="text-sm font-medium">New Thread</span>
+          <Icons.Plus /> <span className="text-sm font-medium">{t.newThread}</span>
         </button>
 
         <div className="flex-1 flex flex-col min-h-0 space-y-2">
           {/* Section 1: History */}
-          <section className="flex-[1.5] flex flex-col min-h-0">
+          <section className={`${appState.leftToolsCollapsed ? 'flex-1' : 'flex-[1.5]'} flex flex-col min-h-0 transition-all duration-300`}>
             <div className="flex items-center gap-2 mb-2 px-1 flex-shrink-0">
-              <Icons.History /><h2 className="text-[10px] uppercase text-zinc-400 font-bold tracking-widest">History</h2>
+              <Icons.History /><h2 className="text-[10px] uppercase text-zinc-400 font-bold tracking-widest">{t.history}</h2>
             </div>
             <div className="flex-1 overflow-y-auto custom-scrollbar space-y-1 pr-1">
               {appState.sessions.map(s => (
@@ -481,18 +510,20 @@ const App: React.FC = () => {
             </div>
           </section>
 
+          {!appState.leftToolsCollapsed && (
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-2">
           {/* Section 2: Cognitive Controls */}
           <section className="flex-shrink-0 pt-4 border-t border-zinc-200">
-            <h2 className="text-[10px] uppercase text-zinc-400 font-bold tracking-widest mb-3 px-1">Cognitive Context</h2>
+            <h2 className="text-[10px] uppercase text-zinc-400 font-bold tracking-widest mb-3 px-1">{t.cognitiveContext}</h2>
             <div className="space-y-2">
               <button onClick={() => setRagEnabled(!ragEnabled)} className={`w-full flex items-center justify-between p-2 rounded-lg border transition-all ${ragEnabled ? 'bg-blue-50 border-blue-100 text-blue-600' : 'bg-zinc-50 border-zinc-100 text-zinc-400'}`}>
-                <div className="flex items-center gap-2 text-[10px] font-bold"><Icons.Database /> RAG Retrieval</div>
+                <div className="flex items-center gap-2 text-[10px] font-bold"><Icons.Database /> {t.ragRetrieval}</div>
                 <div className={`w-2 h-2 rounded-full ${ragEnabled ? 'bg-blue-500 animate-pulse' : 'bg-zinc-200'}`} />
               </button>
               <button 
                 onClick={() => setAppState(prev => ({ ...prev, sessions: prev.sessions.map(s => s.id === prev.activeSessionId ? { ...s, personalLibraryEnabled: !s.personalLibraryEnabled } : s)}))} 
                 className={`w-full flex items-center justify-between p-2 rounded-lg border transition-all ${activeSession?.personalLibraryEnabled ? 'bg-purple-50 border-purple-100 text-purple-600' : 'bg-zinc-50 border-zinc-100 text-zinc-400'}`}>
-                <div className="flex items-center gap-2 text-[10px] font-bold"><Icons.Scroll /> Stance Memory</div>
+                <div className="flex items-center gap-2 text-[10px] font-bold"><Icons.Scroll /> {t.stanceMemory}</div>
                 <div className={`w-2 h-2 rounded-full ${activeSession?.personalLibraryEnabled ? 'bg-purple-500 animate-pulse' : 'bg-zinc-200'}`} />
               </button>
             </div>
@@ -501,7 +532,7 @@ const App: React.FC = () => {
           {/* Section 3: Knowledge Store */}
           <section className="flex-shrink-0 pt-4 border-t border-zinc-200">
              <div className="flex items-center justify-between mb-2 px-1 flex-shrink-0">
-                <h2 className="text-[10px] uppercase text-zinc-400 font-bold tracking-widest">Knowledge Base</h2>
+                <h2 className="text-[10px] uppercase text-zinc-400 font-bold tracking-widest">{t.knowledgeBase}</h2>
                 <button onClick={() => fileInputRef.current?.click()} className="text-zinc-400 hover:text-zinc-900 transition-colors" title="Upload Files"><Icons.Plus /></button>
              </div>
              <button 
@@ -510,7 +541,7 @@ const App: React.FC = () => {
               >
                 <div className="flex items-center gap-2 text-[10px] font-bold">
                   <Icons.Database /> 
-                  <span>Manage Knowledge</span>
+                  <span>{t.manageKnowledge}</span>
                 </div>
                 <span className="text-[9px] bg-zinc-100 px-1.5 py-0.5 rounded text-zinc-400 group-hover:text-zinc-600 transition-colors">
                   {appState.fileLibrary.length}
@@ -520,14 +551,14 @@ const App: React.FC = () => {
 
           {/* Section 4: Personal Philosophy */}
           <section className="flex-shrink-0 pt-4 border-t border-zinc-200">
-            <h2 className="text-[10px] uppercase text-zinc-400 font-bold tracking-widest mb-2 px-1">Thought Library</h2>
+            <h2 className="text-[10px] uppercase text-zinc-400 font-bold tracking-widest mb-2 px-1">{t.thoughtLibrary}</h2>
             <button 
               onClick={() => setAppState(prev => ({ ...prev, status: 'library' }))}
               className="w-full flex items-center justify-between p-3 rounded-xl bg-white border border-zinc-200 text-zinc-500 hover:text-zinc-900 hover:bg-zinc-50 transition-all group shadow-sm"
             >
               <div className="flex items-center gap-2 text-[10px] font-bold">
                 <Icons.Scroll /> 
-                <span>View Stance Archive</span>
+                <span>{t.viewStanceArchive}</span>
               </div>
               <span className="text-[9px] bg-zinc-100 px-1.5 py-0.5 rounded text-zinc-400 group-hover:text-zinc-600 transition-colors">
                 {appState.personalPhilosophyLibrary.length}
@@ -539,16 +570,31 @@ const App: React.FC = () => {
           {appState.currentUser?.role === 'admin' && (
              <div className="flex-shrink-0 pt-2">
                <button onClick={() => setAppState(prev => ({ ...prev, status: 'admin' }))} className={`w-full flex items-center gap-3 p-3 rounded-xl text-xs font-bold transition-all border ${appState.status === 'admin' ? 'bg-zinc-900 text-white border-zinc-900' : 'text-zinc-500 hover:bg-zinc-100 border-transparent'}`}>
-                 <Icons.Lock /> <span>Admin Backend</span>
+                 <Icons.Lock /> <span>{t.adminBackend}</span>
                </button>
              </div>
           )}
+          </div>
+          )}
+        </div>
+
+        {/* Toggle Tools Button (Designer's choice: Floating above the usage bar) */}
+        <div className="px-2 mb-2">
+          <button 
+            onClick={() => setAppState(prev => ({ ...prev, leftToolsCollapsed: !prev.leftToolsCollapsed }))}
+            className="w-full flex items-center justify-center gap-2 py-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400 hover:text-zinc-900 hover:bg-white rounded-xl transition-all border border-transparent hover:border-zinc-200 hover:shadow-sm"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className={`w-3 h-3 transition-transform duration-500 ${appState.leftToolsCollapsed ? '' : 'rotate-180'}`}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
+            </svg>
+            <span>{appState.leftToolsCollapsed ? t.showWorkspace : t.minimizeTools}</span>
+          </button>
         </div>
 
         {/* Quota Bar */}
-        <div className="mt-6 pt-4 border-t border-zinc-200">
+        <div className="mt-2 pt-4 border-t border-zinc-200">
           <div className="flex justify-between text-[9px] font-bold text-zinc-400 mb-2 uppercase tracking-tighter">
-            <span>Resource Usage</span>
+            <span>{t.resourceUsage}</span>
             <span>{Math.round((appState.currentUser.tokensUsed / appState.currentUser.tokenQuota) * 100)}%</span>
           </div>
           <div className="w-full h-1 bg-zinc-200 rounded-full overflow-hidden">
@@ -575,7 +621,7 @@ const App: React.FC = () => {
           <button 
             onClick={handleLogout}
             className="p-2 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded-xl transition-all"
-            title="Sign Out"
+            title={t.signOut}
           >
             <Icons.Logout />
           </button>
@@ -584,33 +630,45 @@ const App: React.FC = () => {
 
       {/* Main Content */}
       {appState.status === 'admin' ? (
-        <AdminDashboard state={appState} onClose={() => setAppState(prev => ({ ...prev, status: 'idle' }))} onUpdateUser={handleUpdateUser} />
+        <AdminDashboard state={appState} language={appState.language} onClose={() => setAppState(prev => ({ ...prev, status: 'idle' }))} onUpdateUser={handleUpdateUser} />
       ) : appState.status === 'library' ? (
         <ThoughtLibrary state={appState} onClose={() => setAppState(prev => ({ ...prev, status: 'idle' }))} onDeleteStance={handleDeleteStance} />
       ) : appState.status === 'files' ? (
         <FileManager 
           state={appState} 
+          language={appState.language}
           onClose={() => setAppState(prev => ({ ...prev, status: 'idle' }))} 
           onDeleteFile={(id) => setAppState(prev => ({ ...prev, fileLibrary: prev.fileLibrary.filter(x => x.id !== id), vectorStore: prev.vectorStore.filter(v => v.fileId !== id) }))} 
         />
       ) : appState.status === 'profile' ? (
-        <UserProfile user={appState.currentUser!} onClose={() => setAppState(prev => ({ ...prev, status: 'idle' }))} onDeleteAccount={handleDeleteAccount} />
+        <UserProfile user={appState.currentUser!} language={appState.language} onClose={() => setAppState(prev => ({ ...prev, status: 'idle' }))} onDeleteAccount={handleDeleteAccount} />
       ) : (
-        <div className="flex-1 flex flex-col relative bg-white">
-          <header className="flex items-center justify-between p-4 border-b border-zinc-100 bg-white/80 backdrop-blur-md sticky top-0 z-20">
-            <div className="flex flex-col">
-              <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-[0.3em]">Investigation Thread</span>
-              <span className="font-medium text-zinc-900 text-sm truncate max-w-xs">{activeSession?.title || 'System Standby'}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="hidden sm:block text-[9px] font-mono text-zinc-400 border border-zinc-200 rounded px-2 py-0.5">
-                {appState.currentUser.tokensUsed.toLocaleString()} / {appState.currentUser.tokenQuota.toLocaleString()} TKN
+        <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex flex-col relative bg-white">
+            <header className="flex items-center justify-between p-4 border-b border-zinc-100 bg-white/80 backdrop-blur-md sticky top-0 z-20">
+              <div className="flex flex-col">
+                <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-[0.3em]">{t.investigationThread}</span>
+                <span className="font-medium text-zinc-900 text-sm truncate max-w-xs">{activeSession?.title || t.systemStandby}</span>
               </div>
-              <div className="text-zinc-900"><Icons.Database /></div>
-            </div>
-          </header>
+              <div className="flex items-center gap-3">
+                <div className="flex gap-1 p-1 bg-zinc-100 rounded-lg mr-2">
+                  <button onClick={() => setAppState(prev => ({ ...prev, language: 'en' }))} className={`px-2 py-0.5 text-[9px] font-bold rounded ${appState.language === 'en' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-400'}`}>EN</button>
+                  <button onClick={() => setAppState(prev => ({ ...prev, language: 'zh' }))} className={`px-2 py-0.5 text-[9px] font-bold rounded ${appState.language === 'zh' ? 'bg-white shadow-sm text-zinc-900' : 'text-zinc-400'}`}>中</button>
+                </div>
+                <div className="hidden sm:block text-[9px] font-mono text-zinc-400 border border-zinc-200 rounded px-2 py-0.5">
+                  {appState.currentUser.tokensUsed.toLocaleString()} / {appState.currentUser.tokenQuota.toLocaleString()} TKN
+                </div>
+                <button 
+                  onClick={() => setAppState(prev => ({ ...prev, rightSidebarOpen: !prev.rightSidebarOpen }))}
+                  className={`p-2 rounded-lg transition-all ${appState.rightSidebarOpen ? 'bg-zinc-100 text-zinc-900' : 'text-zinc-400 hover:text-zinc-600'}`}
+                  title="Toggle Knowledge Sidebar"
+                >
+                  <Icons.Library />
+                </button>
+              </div>
+            </header>
 
-          <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-10 custom-scrollbar">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-10 custom-scrollbar">
             <div className="max-w-3xl mx-auto">
               {activeSession?.messages.map((msg) => (
                 <MessageBubble key={msg.id} message={msg} allFiles={appState.fileLibrary} />
@@ -618,7 +676,7 @@ const App: React.FC = () => {
               {appState.status === 'busy' && (
                 <div className="flex gap-3 p-4 items-center text-zinc-400 bg-zinc-50 border border-zinc-100 rounded-2xl w-fit animate-pulse">
                   <div className="w-3 h-3 border-2 border-zinc-300 border-t-zinc-900 rounded-full animate-spin" />
-                  <span className="text-xs font-medium italic">Agent interaction in progress...</span>
+                  <span className="text-xs font-medium italic">{t.agentInProgress}</span>
                 </div>
               )}
             </div>
@@ -641,17 +699,27 @@ const App: React.FC = () => {
                   value={input} 
                   onChange={(e) => setInput(e.target.value)} 
                   onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} 
-                  placeholder="Analyze logical structure or philosophical background..." 
+                  placeholder={t.inputPlaceholder} 
                   className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl pl-12 pr-16 py-4 focus:outline-none focus:ring-1 focus:ring-zinc-300 text-zinc-900 resize-none text-sm placeholder-zinc-400" 
                   rows={1}
                 />
                 <button onClick={() => fileInputRef.current?.click()} className="absolute left-3 top-1/2 -translate-y-1/2 p-2 text-zinc-400 hover:text-zinc-600"><Icons.Paperclip /></button>
                 <button onClick={handleSendMessage} disabled={!input.trim() || appState.status !== 'idle'} className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${input.trim() && appState.status === 'idle' ? 'bg-zinc-900 text-white shadow-lg' : 'bg-zinc-100 text-zinc-300 opacity-50'}`}><Icons.Send /></button>
               </div>
-              <p className="text-center text-[8px] text-zinc-300 mt-4 uppercase tracking-[0.5em] font-bold">Persistence Node {currentIp}</p>
+              <p className="text-center text-[8px] text-zinc-300 mt-4 uppercase tracking-[0.5em] font-bold">{t.persistenceNode} {currentIp}</p>
             </div>
           </div>
           <input type="file" multiple ref={fileInputRef} className="hidden" onChange={handleFileUpload} accept=".txt,.md,.json,.csv" />
+          </div>
+          {appState.rightSidebarOpen && (
+            <KnowledgeSidebar 
+              state={appState} 
+              language={appState.language}
+              activeSessionMessages={activeSession?.messages.map(m => m.id) || []}
+              onClose={() => setAppState(prev => ({ ...prev, rightSidebarOpen: false }))} 
+              onDeleteStance={handleDeleteStance}
+            />
+          )}
         </div>
       )}
     </div>

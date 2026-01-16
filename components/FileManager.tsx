@@ -2,14 +2,17 @@
 import React from 'react';
 import { AppState, FileAttachment } from '../types';
 import { Icons } from '../constants';
+import { Language, translations } from '../i18n';
 
 interface FileManagerProps {
   state: AppState;
+  language: Language;
   onClose: () => void;
   onDeleteFile: (id: string) => void;
 }
 
-const FileManager: React.FC<FileManagerProps> = ({ state, onClose, onDeleteFile }) => {
+const FileManager: React.FC<FileManagerProps> = ({ state, language, onClose, onDeleteFile }) => {
+  const t = translations[language];
   return (
     <div className="flex-1 flex flex-col bg-white">
       <header className="flex items-center justify-between p-6 border-b border-zinc-100">
@@ -18,8 +21,8 @@ const FileManager: React.FC<FileManagerProps> = ({ state, onClose, onDeleteFile 
             <Icons.Database />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-zinc-900">Knowledge Base</h2>
-            <p className="text-xs text-zinc-500 font-medium">Manage your indexed documents and research data</p>
+            <h2 className="text-lg font-bold text-zinc-900">{t.knowledgeBase}</h2>
+            <p className="text-xs text-zinc-500 font-medium">{t.manageResearchData}</p>
           </div>
         </div>
         <button 
@@ -37,8 +40,8 @@ const FileManager: React.FC<FileManagerProps> = ({ state, onClose, onDeleteFile 
               <div className="w-16 h-16 bg-zinc-50 rounded-full flex items-center justify-center mb-4">
                 <Icons.Document />
               </div>
-              <p className="text-sm font-medium">No files indexed yet</p>
-              <p className="text-[10px] mt-1 italic uppercase tracking-widest">Knowledge engine standby</p>
+              <p className="text-sm font-medium">{t.noFilesIndexed}</p>
+              <p className="text-[10px] mt-1 italic uppercase tracking-widest">{t.knowledgeEngineStandby}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -56,9 +59,9 @@ const FileManager: React.FC<FileManagerProps> = ({ state, onClose, onDeleteFile 
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-[10px] text-zinc-400 uppercase font-bold">{(file.size / 1024).toFixed(1)} KB</span>
                         <span className="w-1 h-1 bg-zinc-300 rounded-full" />
-                        <span className="text-[10px] text-zinc-400 uppercase font-bold">{file.isIndexed ? 'Indexed' : 'Pending'}</span>
+                        <span className="text-[10px] text-zinc-400 uppercase font-bold">{file.isIndexed ? t.indexed : t.pending}</span>
                       </div>
-                      <span className="text-[9px] text-zinc-400 mt-2 font-medium italic">Added {new Date(file.timestamp).toLocaleDateString()}</span>
+                      <span className="text-[9px] text-zinc-400 mt-2 font-medium italic">{t.added} {new Date(file.timestamp).toLocaleDateString()}</span>
                     </div>
                   </div>
                   <button 
@@ -77,10 +80,10 @@ const FileManager: React.FC<FileManagerProps> = ({ state, onClose, onDeleteFile 
       <footer className="p-6 border-t border-zinc-100 bg-zinc-50/50">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em]">
-            Total Storage: {state.fileLibrary.length} Documents
+            {t.totalStorage}: {state.fileLibrary.length} {t.documents}
           </div>
           <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-[0.2em]">
-            Vector Store: {state.vectorStore.length} Chunks
+            {t.vectorStore}: {state.vectorStore.length} {t.chunks}
           </div>
         </div>
       </footer>

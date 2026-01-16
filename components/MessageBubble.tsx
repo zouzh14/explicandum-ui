@@ -57,10 +57,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, allFiles = [] })
         
         <div className={`rounded-2xl px-5 py-4 shadow-sm relative ${
           isUser 
-            ? 'bg-zinc-900 text-white font-medium' 
+            ? 'bg-zinc-50 border border-zinc-100 text-zinc-900 font-medium' 
             : 'bg-white border border-zinc-200 text-zinc-800'
         }`}>
-          <div className={`text-sm md:text-base leading-relaxed prose prose-sm max-w-none ${isUser ? 'prose-invert' : ''}`}>
+          <div className={`text-sm md:text-base leading-[1.8] prose prose-sm max-w-none ${isUser ? '' : ''} prose-p:leading-[1.8]`}>
             {displayContent ? (
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {displayContent}
@@ -71,12 +71,12 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, allFiles = [] })
           </div>
 
           {(message.ragSources || attachedFiles.length > 0) && (
-            <div className={`mt-4 pt-3 border-t flex flex-wrap gap-2 items-center ${isUser ? 'border-zinc-700' : 'border-zinc-100'}`}>
+            <div className={`mt-4 pt-3 border-t flex flex-wrap gap-2 items-center ${isUser ? 'border-zinc-200' : 'border-zinc-100'}`}>
               {message.ragSources?.map((s, i) => (
-                <span key={i} className={`${isUser ? 'bg-zinc-800 text-zinc-400' : 'bg-zinc-50 text-zinc-500'} text-[9px] px-2 py-0.5 rounded border ${isUser ? 'border-zinc-700' : 'border-zinc-200'}`}>{s}</span>
+                <span key={i} className={`${isUser ? 'bg-zinc-100 text-zinc-500' : 'bg-zinc-50 text-zinc-500'} text-[9px] px-2 py-0.5 rounded border ${isUser ? 'border-zinc-200' : 'border-zinc-200'}`}>{s}</span>
               ))}
               {attachedFiles.map(f => (
-                <span key={f.id} className={`flex items-center gap-1 text-[9px] px-2 py-0.5 rounded border ${isUser ? 'bg-blue-900/30 text-blue-300 border-blue-800' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
+                <span key={f.id} className={`flex items-center gap-1 text-[9px] px-2 py-0.5 rounded border ${isUser ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>
                   <Icons.Document />
                   {f.name}
                 </span>

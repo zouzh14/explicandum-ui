@@ -1,4 +1,6 @@
 
+import { Language } from './i18n';
+
 export enum AgentType {
   SYSTEM = 'SYSTEM',
   LOGIC_ANALYST = 'LOGIC_ANALYST',
@@ -94,4 +96,7 @@ export interface AppState {
   status: 'idle' | 'busy' | 'indexing' | 'admin' | 'library' | 'profile' | 'files'; // Added files status
   registeredUsers: User[];
   ipRegistry: IpRegistry;
+  rightSidebarOpen: boolean;
+  leftToolsCollapsed: boolean;
+  language: Language;
 }

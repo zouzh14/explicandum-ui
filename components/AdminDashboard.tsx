@@ -2,14 +2,17 @@
 import React from 'react';
 import { AppState, User } from '../types';
 import { Icons } from '../constants';
+import { Language, translations } from '../i18n';
 
 interface AdminDashboardProps {
   state: AppState;
+  language: Language;
   onClose: () => void;
   onUpdateUser: (userId: string, updates: Partial<User>) => void;
 }
 
-const AdminDashboard: React.FC<AdminDashboardProps> = ({ state, onClose, onUpdateUser }) => {
+const AdminDashboard: React.FC<AdminDashboardProps> = ({ state, language, onClose, onUpdateUser }) => {
+  const t = translations[language];
   const totalTokensUsed = state.registeredUsers.reduce((acc, u) => acc + u.tokensUsed, 0);
   const totalRequests = state.registeredUsers.reduce((acc, u) => acc + u.requestCount, 0);
 
@@ -18,9 +21,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ state, onClose, onUpdat
       <div className="flex items-center justify-between mb-10 border-b border-zinc-100 pb-6">
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 flex items-center gap-3">
-            <Icons.Database /> System Administration
+            <Icons.Database /> {t.adminDashboard}
           </h1>
-          <p className="text-sm text-zinc-400 mt-1 uppercase tracking-widest text-[10px] font-bold">Node Control & Resource Audit</p>
+          <p className="text-sm text-zinc-400 mt-1 uppercase tracking-widest text-[10px] font-bold">{t.manageAccess}</p>
         </div>
         <button 
           onClick={onClose}
@@ -33,10 +36,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ state, onClose, onUpdat
       {/* Global Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
         {[
-          { label: 'Total Tokens', value: totalTokensUsed.toLocaleString() },
-          { label: 'Total Requests', value: totalRequests.toLocaleString() },
-          { label: 'Active Researchers', value: state.registeredUsers.length },
-          { label: 'Vector Index Size', value: state.vectorStore.length }
+          { label: language === 'zh' ? '总 Token' : 'Total Tokens', value: totalTokensUsed.toLocaleString() },
+          { label: language === 'zh' ? '总请求数' : 'Total Requests', value: totalRequests.toLocaleString() },
+          { label: language === 'zh' ? '活跃研究员' : 'Active Researchers', value: state.registeredUsers.length },
+          { label: language === 'zh' ? '向量索引大小' : 'Vector Index Size', value: state.vectorStore.length }
         ].map((stat, i) => (
           <div key={i} className="bg-zinc-50 border border-zinc-200 p-6 rounded-2xl relative overflow-hidden group shadow-sm">
             <div className="absolute top-0 right-0 p-2 opacity-5 group-hover:opacity-10 transition-opacity">
@@ -51,18 +54,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ state, onClose, onUpdat
       {/* User Directory */}
       <div className="bg-white border border-zinc-200 rounded-2xl overflow-hidden mb-12 shadow-sm">
         <div className="p-6 border-b border-zinc-100 flex items-center justify-between bg-zinc-50">
-          <h2 className="text-sm font-bold text-zinc-900 uppercase tracking-wider">User Directory & Quota Control</h2>
+          <h2 className="text-sm font-bold text-zinc-900 uppercase tracking-wider">{t.userRegistry}</h2>
           <div className="text-[10px] text-zinc-400 font-mono">Simulated Persistence Mode</div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead className="bg-white text-zinc-400 border-b border-zinc-100">
               <tr>
-                <th className="p-4 font-bold uppercase tracking-tighter">Identity / IP</th>
-                <th className="p-4 font-bold uppercase tracking-tighter">Consumption</th>
-                <th className="p-4 font-bold uppercase tracking-tighter">Allocated Quota</th>
-                <th className="p-4 font-bold uppercase tracking-tighter">Activity</th>
-                <th className="p-4 font-bold uppercase tracking-tighter">Node Actions</th>
+                <th className="p-4 font-bold uppercase tracking-tighter">{t.username} / IP</th>
+                <th className="p-4 font-bold uppercase tracking-tighter">{t.used}</th>
+                <th className="p-4 font-bold uppercase tracking-tighter">{t.quota}</th>
+                <th className="p-4 font-bold uppercase tracking-tighter">{t.history}</th>
+                <th className="p-4 font-bold uppercase tracking-tighter">{t.actions}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
@@ -77,7 +80,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ state, onClose, onUpdat
                   <td className="p-4">
                     <div className="flex flex-col gap-1.5">
                        <div className="flex justify-between text-[9px] font-mono text-zinc-400 mb-0.5">
-                          <span>{user.tokensUsed.toLocaleString()} Used</span>
+                          <span>{user.tokensUsed.toLocaleString()} {t.used}</span>
                           <span>{Math.round((user.tokensUsed / user.tokenQuota) * 100)}%</span>
                        </div>
                        <div className="w-40 h-1 bg-zinc-100 rounded-full overflow-hidden">
