@@ -115,6 +115,25 @@ const KeyMetricsSection: React.FC<KeyMetricsSectionProps> = ({ state, language }
 
   return (
     <div className="mb-12">
+      {/* DEMO DATA 警告横幅 */}
+      <div className="mb-6 p-4 bg-yellow-100 border border-yellow-300 rounded-lg">
+        <div className="flex items-center gap-3">
+          <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+          <div className="flex-1">
+            <h3 className="font-bold text-yellow-800">
+              {language === 'zh' ? '演示数据 - 关键指标' : 'DEMO DATA - Key Metrics'}
+            </h3>
+            <p className="text-sm text-yellow-700 mt-1">
+              {language === 'zh' 
+                ? '系统健康度和趋势变化数据为模拟数据。真实系统监控功能正在开发中。'
+                : 'System health and trend change data are simulated. Real system monitoring is under development.'}
+            </p>
+          </div>
+        </div>
+      </div>
+
       <h2 className="text-lg font-bold text-zinc-900 mb-6 flex items-center gap-2">
         <Icons.Database />
         {language === 'zh' ? '关键指标' : 'Key Metrics'}
@@ -123,22 +142,19 @@ const KeyMetricsSection: React.FC<KeyMetricsSectionProps> = ({ state, language }
         {metrics.map((metric, index) => (
           <div 
             key={index} 
-            className={`bg-white border rounded-2xl shadow-sm hover:shadow-md transition-all ${
+            className={`bg-white border rounded-2xl shadow-sm hover:shadow-md transition-all relative ${
               !metric.isReal ? 'border-zinc-200 opacity-75' : 'border-zinc-200'
             }`}
           >
             {/* 演示数据指示器 */}
             {!metric.isReal && (
-              <div className="flex items-center justify-between p-2 bg-zinc-50 border-b border-zinc-100 rounded-t-2xl">
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse" />
-                  <span className="text-xs text-orange-600 font-medium">
+              <div className="absolute top-2 right-2 z-10">
+                <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 border border-yellow-300 rounded-full">
+                  <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse" />
+                  <span className="text-xs text-yellow-800 font-medium">
                     {language === 'zh' ? '演示数据' : 'Demo Data'}
                   </span>
                 </div>
-                <span className="text-xs text-zinc-400" title={language === 'zh' ? '需要连接真实API' : 'Requires real API connection'}>
-                  ⚠️
-                </span>
               </div>
             )}
             
@@ -147,7 +163,7 @@ const KeyMetricsSection: React.FC<KeyMetricsSectionProps> = ({ state, language }
                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
                   metric.isReal 
                     ? `bg-${metric.color}-50 text-${metric.color}-600`
-                    : 'bg-zinc-100 text-zinc-400'
+                    : 'bg-zinc-100 text-zinc-400 opacity-50'
                 }`}>
                   {getIcon(metric.icon)}
                 </div>
@@ -156,7 +172,7 @@ const KeyMetricsSection: React.FC<KeyMetricsSectionProps> = ({ state, language }
                   <span className={`text-sm font-medium ${
                     metric.isReal 
                       ? (metric.trend === 'up' ? 'text-green-600' : 'text-red-600')
-                      : 'text-zinc-400'
+                      : 'text-zinc-400 opacity-60'
                   }`}>
                     {metric.change}
                   </span>
@@ -164,11 +180,13 @@ const KeyMetricsSection: React.FC<KeyMetricsSectionProps> = ({ state, language }
               </div>
               <div className="space-y-1">
                 <div className={`text-2xl font-bold font-mono ${
-                  metric.isReal ? 'text-zinc-900' : 'text-zinc-500'
+                  metric.isReal ? 'text-zinc-900' : 'text-zinc-500 opacity-70'
                 }`}>
                   {metric.value}
                 </div>
-                <div className="text-xs text-zinc-500 uppercase tracking-wider">
+                <div className={`text-xs uppercase tracking-wider ${
+                  metric.isReal ? 'text-zinc-500' : 'text-zinc-400'
+                }`}>
                   {metric.title}
                 </div>
               </div>

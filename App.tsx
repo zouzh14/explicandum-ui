@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Message, ChatSession, User, AppState, PhilosophicalStance, FileAttachment, IpRegistry, VectorChunk } from './types';
 import { Icons } from './constants';
 import { translations } from './i18n';
+import { useAuth } from './contexts/AuthContext';
 import MessageBubble from './components/MessageBubble';
 import AdminDashboard from './components/AdminDashboard';
 import UserManagement from './components/admin/UserManagement';
@@ -30,6 +31,8 @@ const DEFAULT_QUOTA = 100000;
 const API_BASE_URL = "http://localhost:8000";
 
 const App: React.FC = () => {
+  const { state: authState, dispatch } = useAuth();
+  
   const [appState, setAppState] = useState<AppState>(() => {
     const saved = localStorage.getItem('explicandum_state_v8');
     if (saved) {
@@ -225,6 +228,8 @@ const App: React.FC = () => {
 
   const handleAuthAction = async () => {
     setAuthError('');
+    dispatch({ type: 'LOGIN_START' });
+    
     if (authMode === 'login') {
       try {
         const res = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -242,20 +247,25 @@ const App: React.FC = () => {
           } catch {
             setAuthError(`Login failed: ${res.status} ${res.statusText}`);
           }
+          dispatch({ type: 'LOGIN_FAILURE', error: authError });
           return;
         }
         
         const data = await res.json();
-        localStorage.setItem('explicandum_token', data.access_token);
+        dispatch({ type: 'LOGIN_SUCCESS', user: data.user, token: data.access_token });
         setAppState(prev => ({ ...prev, currentUser: data.user }));
       } catch (e) {
         // Network error or other exception
         console.error('Login error:', e);
-        setAuthError('Cannot connect to server. Please check your network connection.');
+        const errorMsg = 'Cannot connect to server. Please check your network connection.';
+        setAuthError(errorMsg);
+        dispatch({ type: 'LOGIN_FAILURE', error: errorMsg });
       }
     } else if (authMode === 'register') {
       if (!username || !password || !email || !verificationCode) {
-        setAuthError('All fields required for registration');
+        const errorMsg = 'All fields required for registration';
+        setAuthError(errorMsg);
+        dispatch({ type: 'LOGIN_FAILURE', error: errorMsg });
         return;
       }
       
@@ -275,21 +285,26 @@ const App: React.FC = () => {
           } catch {
             setAuthError(`Registration failed: ${res.status} ${res.statusText}`);
           }
+          dispatch({ type: 'LOGIN_FAILURE', error: authError });
           return;
         }
         
         const data = await res.json();
         
         if (data.status === 'success') {
-          localStorage.setItem('explicandum_token', data.access_token);
+          dispatch({ type: 'LOGIN_SUCCESS', user: data.user, token: data.access_token });
           setAppState(prev => ({ ...prev, currentUser: data.user }));
         } else {
-          setAuthError(data.message || 'Registration failed');
+          const errorMsg = data.message || 'Registration failed';
+          setAuthError(errorMsg);
+          dispatch({ type: 'LOGIN_FAILURE', error: errorMsg });
         }
       } catch (e) {
         // Network error or other exception
         console.error('Registration error:', e);
-        setAuthError('Cannot connect to server. Please check your network connection and try again.');
+        const errorMsg = 'Cannot connect to server. Please check your network connection and try again.';
+        setAuthError(errorMsg);
+        dispatch({ type: 'LOGIN_FAILURE', error: errorMsg });
       }
     } else if (authMode === 'guest') {
       // 创建临时用户
@@ -302,27 +317,33 @@ const App: React.FC = () => {
         
         if (!res.ok) {
           const errorData = await res.json();
-          setAuthError(errorData.message || `Failed to create temporary user (${res.status})`);
+          const errorMsg = errorData.message || `Failed to create temporary user (${res.status})`;
+          setAuthError(errorMsg);
+          dispatch({ type: 'LOGIN_FAILURE', error: errorMsg });
           return;
         }
         
         const data = await res.json();
         
         if (data.status === 'success') {
-          localStorage.setItem('explicandum_token', data.access_token);
+          dispatch({ type: 'LOGIN_SUCCESS', user: data.user, token: data.access_token });
           setAppState(prev => ({ ...prev, currentUser: data.user }));
         } else {
-          setAuthError(data.message || 'Failed to create temporary user');
+          const errorMsg = data.message || 'Failed to create temporary user';
+          setAuthError(errorMsg);
+          dispatch({ type: 'LOGIN_FAILURE', error: errorMsg });
         }
       } catch (e) {
         console.error('Temp user creation error:', e);
-        setAuthError('Cannot connect to server. Please check your network connection.');
+        const errorMsg = 'Cannot connect to server. Please check your network connection.';
+        setAuthError(errorMsg);
+        dispatch({ type: 'LOGIN_FAILURE', error: errorMsg });
       }
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('explicandum_token');
+    dispatch({ type: 'LOGOUT' });
     setAppState(prev => ({ ...prev, currentUser: null, activeSessionId: null, status: 'idle' }));
   };
 
@@ -743,10 +764,9 @@ const App: React.FC = () => {
       {/* Main Content */}
       {showUserManagement ? (
         <UserManagement 
-          state={appState} 
           language={appState.language} 
           onClose={() => setShowUserManagement(false)} 
-          onUpdateUser={handleUpdateUser} 
+          token={authState.token || ''}
         />
       ) : showAnalytics ? (
         <AnalyticsPage 

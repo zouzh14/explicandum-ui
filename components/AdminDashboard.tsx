@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AppState, User } from '../types';
 import { Icons } from '../constants';
 import { Language, translations } from '../i18n';
+import { useAuth } from '../contexts/AuthContext';
 
 // 子组件导入
 import KeyMetricsSection from './admin/KeyMetricsSection';
@@ -19,7 +20,8 @@ interface AdminDashboardProps {
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ state, language, onClose, onUpdateUser }) => {
   const t = translations[language];
-  const [activeTab, setActiveTab] = useState<'overview' | 'monitoring'>('overview');
+  const { state: authState } = useAuth(); // 获取认证状态
+  const [activeTab, setActiveTab] = useState<'overview' | 'monitoring' | 'invitations'>('overview');
 
   return (
     <div className="flex-1 flex flex-col bg-white text-zinc-600 p-8 overflow-y-auto custom-scrollbar">
@@ -85,6 +87,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ state, language, onClos
       {activeTab === 'monitoring' && (
         <RiskMonitoringPage />
       )}
+
     </div>
   );
 };

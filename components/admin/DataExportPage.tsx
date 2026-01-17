@@ -319,14 +319,41 @@ const DataExportPage: React.FC<DataExportPageProps> = ({ state, language, onClos
         </button>
       </div>
 
+      {/* DEMO DATA 警告横幅 */}
+      <div className="mb-6 p-4 bg-blue-100 border border-blue-300 rounded-lg">
+        <div className="flex items-center gap-3">
+          <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <div className="flex-1">
+            <h3 className="font-bold text-blue-800">
+              {language === 'zh' ? '前端数据导出' : 'Frontend Data Export'}
+            </h3>
+            <p className="text-sm text-blue-700 mt-1">
+              {language === 'zh' 
+                ? '此功能导出的是前端缓存数据，非数据库完整数据。真实数据库导出功能正在开发中。'
+                : 'This exports frontend cached data, not complete database data. Real database export is under development.'}
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* 左侧：导出配置 */}
         <div className="lg:col-span-2 space-y-6">
           {/* 数据统计 */}
           <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-zinc-900 mb-4">
-              {language === 'zh' ? '数据统计' : 'Data Statistics'}
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-zinc-900">
+                {language === 'zh' ? '数据统计' : 'Data Statistics'}
+              </h2>
+              <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 border border-blue-300 rounded-full">
+                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+                <span className="text-xs text-blue-800 font-medium">
+                  {language === 'zh' ? '前端数据' : 'Frontend Data'}
+                </span>
+              </div>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div className="text-center p-4 bg-zinc-50 rounded-lg">
                 <div className="text-2xl font-bold text-zinc-900">{dataStats.users}</div>

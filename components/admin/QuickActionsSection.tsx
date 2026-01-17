@@ -56,6 +56,18 @@ const QuickActionsSection: React.FC<QuickActionsSectionProps> = ({ language, onC
       ),
       color: 'orange',
       disabled: false // 已启用
+    },
+    {
+      id: 'invitations',
+      title: language === 'zh' ? '邀请码管理' : 'Invitation Codes',
+      description: language === 'zh' ? '创建和管理邀请码' : 'Create and manage invitation codes',
+      icon: (
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+        </svg>
+      ),
+      color: 'indigo',
+      disabled: false
     }
   ];
 
@@ -101,6 +113,16 @@ const QuickActionsSection: React.FC<QuickActionsSectionProps> = ({ language, onC
           }, 100);
         }
         break;
+      case 'invitations':
+        // 触发邀请码管理页面显示
+        if (onClose) {
+          onClose(); // 关闭当前dashboard
+          // 触发状态变更显示邀请码管理页面
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('showInvitationManagement'));
+          }, 100);
+        }
+        break;
       default:
         break;
     }
@@ -135,6 +157,11 @@ const QuickActionsSection: React.FC<QuickActionsSectionProps> = ({ language, onC
         bg: 'bg-orange-50',
         text: 'text-orange-600',
         hover: 'hover:bg-orange-100'
+      },
+      indigo: {
+        bg: 'bg-indigo-50',
+        text: 'text-indigo-600',
+        hover: 'hover:bg-indigo-100'
       }
     };
 

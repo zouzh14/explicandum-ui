@@ -130,6 +130,25 @@ const SystemStatusSection: React.FC<SystemStatusSectionProps> = ({ state, langua
 
   return (
     <div className="mb-12">
+      {/* DEMO DATA 警告横幅 */}
+      <div className="mb-6 p-4 bg-yellow-100 border border-yellow-300 rounded-lg">
+        <div className="flex items-center gap-3">
+          <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+          <div className="flex-1">
+            <h3 className="font-bold text-yellow-800">
+              {language === 'zh' ? '演示数据 - 系统状态监控' : 'DEMO DATA - System Status Monitoring'}
+            </h3>
+            <p className="text-sm text-yellow-700 mt-1">
+              {language === 'zh' 
+                ? '此部分显示的是模拟数据。真实系统状态监控功能正在开发中。'
+                : 'This section shows simulated data. Real system status monitoring is under development.'}
+            </p>
+          </div>
+        </div>
+      </div>
+
       <h2 className="text-lg font-bold text-zinc-900 mb-6">
         {language === 'zh' ? '系统状态' : 'System Status'}
       </h2>
@@ -141,9 +160,9 @@ const SystemStatusSection: React.FC<SystemStatusSectionProps> = ({ state, langua
             <div key={item.id} className={`bg-white border ${colors.border} rounded-2xl shadow-sm relative opacity-75`}>
               {/* 演示数据指示器 */}
               <div className="absolute top-2 right-2 z-10">
-                <div className="flex items-center gap-1 px-2 py-1 bg-zinc-50 border border-zinc-100 rounded-full">
-                  <div className="w-1.5 h-1.5 bg-orange-400 rounded-full animate-pulse" />
-                  <span className="text-xs text-orange-600 font-medium">
+                <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 border border-yellow-300 rounded-full">
+                  <div className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse" />
+                  <span className="text-xs text-yellow-800 font-medium">
                     {language === 'zh' ? '演示' : 'Demo'}
                   </span>
                 </div>
