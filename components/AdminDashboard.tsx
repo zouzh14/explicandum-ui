@@ -8,6 +8,7 @@ import KeyMetricsSection from './admin/KeyMetricsSection';
 import QuickActionsSection from './admin/QuickActionsSection';
 import SystemStatusSection from './admin/SystemStatusSection';
 import RecentActivitySection from './admin/RecentActivitySection';
+import RiskMonitoringPage from './admin/RiskMonitoringPage';
 
 interface AdminDashboardProps {
   state: AppState;
@@ -18,6 +19,7 @@ interface AdminDashboardProps {
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ state, language, onClose, onUpdateUser }) => {
   const t = translations[language];
+  const [activeTab, setActiveTab] = useState<'overview' | 'monitoring'>('overview');
 
   return (
     <div className="flex-1 flex flex-col bg-white text-zinc-600 p-8 overflow-y-auto custom-scrollbar">
@@ -39,17 +41,50 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ state, language, onClos
         </button>
       </div>
 
-      {/* Key Metrics Section */}
-      <KeyMetricsSection state={state} language={language} />
+      {/* Tab Navigation */}
+      <div className="flex gap-4 mb-6 border-b border-zinc-200">
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={`pb-3 px-1 font-medium text-sm transition-colors ${
+            activeTab === 'overview'
+              ? 'text-zinc-900 border-b-2 border-zinc-900'
+              : 'text-zinc-500 hover:text-zinc-700'
+          }`}
+        >
+          {language === 'zh' ? '总览' : 'Overview'}
+        </button>
+        <button
+          onClick={() => setActiveTab('monitoring')}
+          className={`pb-3 px-1 font-medium text-sm transition-colors ${
+            activeTab === 'monitoring'
+              ? 'text-zinc-900 border-b-2 border-zinc-900'
+              : 'text-zinc-500 hover:text-zinc-700'
+          }`}
+        >
+          {language === 'zh' ? '风险监控' : 'Risk Monitoring'}
+        </button>
+      </div>
 
-      {/* Quick Actions Section */}
-      <QuickActionsSection language={language} onClose={onClose} />
+      {/* Tab Content */}
+      {activeTab === 'overview' && (
+        <>
+          {/* Key Metrics Section */}
+          <KeyMetricsSection state={state} language={language} />
 
-      {/* System Status Section */}
-      <SystemStatusSection state={state} language={language} />
+          {/* Quick Actions Section */}
+          <QuickActionsSection language={language} onClose={onClose} />
 
-      {/* Recent Activity Section */}
-      <RecentActivitySection state={state} language={language} />
+          {/* System Status Section */}
+          <SystemStatusSection state={state} language={language} />
+
+          {/* Recent Activity Section */}
+          <RecentActivitySection state={state} language={language} />
+        </>
+      )}
+
+      {activeTab === 'monitoring' && (
+        <RiskMonitoringPage />
+      )}
     </div>
   );
 };
