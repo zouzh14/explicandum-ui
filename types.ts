@@ -56,10 +56,11 @@ export interface User {
   id: string;
   username: string;
   password?: string;
-  role: 'admin' | 'researcher' | 'guest';
+  role: 'admin' | 'researcher' | 'user' | 'temp';
   registrationIp: string;
   createdAt: number;
-  isAnonymous: boolean;
+  isTemp: boolean;  // 替换isAnonymous为isTemp
+  expiresAt?: number;  // 临时用户过期时间
   // Quota & Tracking
   tokenQuota: number;
   tokensUsed: number;
@@ -79,7 +80,6 @@ export interface ChatSession {
 
 export interface IpRegistry {
   [ip: string]: {
-    anonymousCount: number;
     lastSeen: number;
     totalTokensUsed: number;
     totalRequests: number;

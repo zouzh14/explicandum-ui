@@ -5,16 +5,28 @@ import { Icons } from './constants';
 import { translations } from './i18n';
 import MessageBubble from './components/MessageBubble';
 import AdminDashboard from './components/AdminDashboard';
+import UserManagement from './components/admin/UserManagement';
+import AnalyticsPage from './components/admin/AnalyticsPage';
+import SystemSettingsPage from './components/admin/SystemSettingsPage';
+import DataExportPage from './components/admin/DataExportPage';
+import BackupRestorePage from './components/admin/BackupRestorePage';
 import ThoughtLibrary from './components/ThoughtLibrary';
 import UserProfile from './components/UserProfile';
 import FileManager from './components/FileManager';
 import KnowledgeSidebar from './components/KnowledgeSidebar';
-import { streamExplicandumResponse, extractPhilosophicalStance, deletePhilosophicalStance, deleteChatSession } from './services/geminiService';
+import { 
+  streamExplicandumResponse, 
+  extractPhilosophicalStance, 
+  deletePhilosophicalStance, 
+  deleteChatSession,
+  fetchSessions,
+  createSession,
+  fetchStances,
+  createStance
+} from './services/geminiService';
 import { vectorStore, pgDb } from './services/dbService';
 
-const ANONYMOUS_LIMIT = 3;
 const DEFAULT_QUOTA = 100000;
-const GUEST_QUOTA = 20000;
 const API_BASE_URL = "http://localhost:8000";
 
 const App: React.FC = () => {
@@ -50,7 +62,7 @@ const App: React.FC = () => {
       role: 'admin',
       registrationIp: '127.0.0.1',
       createdAt: Date.now(),
-      isAnonymous: false,
+      isTemp: false,
       tokenQuota: 99999999,
       tokensUsed: 0,
       requestCount: 0,
@@ -94,6 +106,11 @@ const App: React.FC = () => {
   // State for renaming
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
+  const [showUserManagement, setShowUserManagement] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showSystemSettings, setShowSystemSettings] = useState(false);
+  const [showDataExport, setShowDataExport] = useState(false);
+  const [showBackupRestore, setShowBackupRestore] = useState(false);
 
   useEffect(() => {
     let timer: any;
@@ -113,9 +130,53 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const { status, ...persistentState } = appState;
-    localStorage.setItem('explicandum_state_v8', JSON.stringify(persistentState));
-  }, [appState]);
+    if (appState.currentUser) {
+      // Sync sessions and stances from backend when logged in
+      fetchSessions().then(data => {
+        if (Array.isArray(data)) setAppState(prev => ({ ...prev, sessions: data }));
+      });
+      fetchStances().then(data => {
+        if (Array.isArray(data)) setAppState(prev => ({ ...prev, personalPhilosophyLibrary: data }));
+      });
+    }
+  }, [appState.currentUser?.id]);
+
+  // Listen for admin page navigation
+  useEffect(() => {
+    const handleShowUserManagement = () => {
+      setShowUserManagement(true);
+    };
+
+    const handleShowAnalytics = () => {
+      setShowAnalytics(true);
+    };
+
+    const handleShowSystemSettings = () => {
+      setShowSystemSettings(true);
+    };
+
+    const handleShowDataExport = () => {
+      setShowDataExport(true);
+    };
+
+    const handleShowBackupRestore = () => {
+      setShowBackupRestore(true);
+    };
+
+    window.addEventListener('showUserManagement', handleShowUserManagement);
+    window.addEventListener('showAnalytics', handleShowAnalytics);
+    window.addEventListener('showSystemSettings', handleShowSystemSettings);
+    window.addEventListener('showDataExport', handleShowDataExport);
+    window.addEventListener('showBackupRestore', handleShowBackupRestore);
+    
+    return () => {
+      window.removeEventListener('showUserManagement', handleShowUserManagement);
+      window.removeEventListener('showAnalytics', handleShowAnalytics);
+      window.removeEventListener('showSystemSettings', handleShowSystemSettings);
+      window.removeEventListener('showDataExport', handleShowDataExport);
+      window.removeEventListener('showBackupRestore', handleShowBackupRestore);
+    };
+  }, []);
 
   const activeSession = useMemo(() => {
     return appState.sessions.find(s => s.id === appState.activeSessionId) || null;
@@ -165,11 +226,32 @@ const App: React.FC = () => {
   const handleAuthAction = async () => {
     setAuthError('');
     if (authMode === 'login') {
-      const user = appState.registeredUsers.find(u => u.username === username && u.password === password);
-      if (user) {
-        setAppState(prev => ({ ...prev, currentUser: user }));
-      } else {
-        setAuthError('Invalid credentials');
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        
+        // Check if response is OK
+        if (!res.ok) {
+          // Try to parse error response
+          try {
+            const errorData = await res.json();
+            setAuthError(errorData.detail || `Login failed (${res.status})`);
+          } catch {
+            setAuthError(`Login failed: ${res.status} ${res.statusText}`);
+          }
+          return;
+        }
+        
+        const data = await res.json();
+        localStorage.setItem('explicandum_token', data.access_token);
+        setAppState(prev => ({ ...prev, currentUser: data.user }));
+      } catch (e) {
+        // Network error or other exception
+        console.error('Login error:', e);
+        setAuthError('Cannot connect to server. Please check your network connection.');
       }
     } else if (authMode === 'register') {
       if (!username || !password || !email || !verificationCode) {
@@ -183,54 +265,64 @@ const App: React.FC = () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, code: verificationCode, username, password })
         });
+        
+        // Check if response is OK
+        if (!res.ok) {
+          // Try to parse error response
+          try {
+            const errorData = await res.json();
+            setAuthError(errorData.message || `Registration failed (${res.status})`);
+          } catch {
+            setAuthError(`Registration failed: ${res.status} ${res.statusText}`);
+          }
+          return;
+        }
+        
         const data = await res.json();
         
         if (data.status === 'success') {
-          const newUser: User = {
-            ...data.user,
-            password, // Storing locally for this demo's simple auth
-            registrationIp: currentIp,
-            createdAt: Date.now(),
-            isAnonymous: false,
-            tokensUsed: 0,
-            requestCount: 0,
-            lastRequestAt: 0
-          };
-          await pgDb.saveUser(newUser);
-          setAppState(prev => ({ ...prev, registeredUsers: [...prev.registeredUsers, newUser], currentUser: newUser }));
+          localStorage.setItem('explicandum_token', data.access_token);
+          setAppState(prev => ({ ...prev, currentUser: data.user }));
         } else {
-          setAuthError(data.message);
+          setAuthError(data.message || 'Registration failed');
         }
       } catch (e) {
-        setAuthError('Verification failed');
+        // Network error or other exception
+        console.error('Registration error:', e);
+        setAuthError('Cannot connect to server. Please check your network connection and try again.');
       }
     } else if (authMode === 'guest') {
-      const currentStats = appState.ipRegistry[currentIp] || { anonymousCount: 0, lastSeen: Date.now(), totalTokensUsed: 0, totalRequests: 0 };
-      if (currentStats.anonymousCount >= ANONYMOUS_LIMIT) {
-        setAuthError(`Limit reached for this IP. Please register.`);
-        return;
+      // 创建临时用户
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/create-temp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ registration_ip: currentIp })
+        });
+        
+        if (!res.ok) {
+          const errorData = await res.json();
+          setAuthError(errorData.message || `Failed to create temporary user (${res.status})`);
+          return;
+        }
+        
+        const data = await res.json();
+        
+        if (data.status === 'success') {
+          localStorage.setItem('explicandum_token', data.access_token);
+          setAppState(prev => ({ ...prev, currentUser: data.user }));
+        } else {
+          setAuthError(data.message || 'Failed to create temporary user');
+        }
+      } catch (e) {
+        console.error('Temp user creation error:', e);
+        setAuthError('Cannot connect to server. Please check your network connection.');
       }
-      const anonymousUser: User = {
-        id: 'anon_' + Date.now(),
-        username: 'Guest_' + (currentStats.anonymousCount + 1),
-        role: 'guest',
-        registrationIp: currentIp,
-        createdAt: Date.now(),
-        isAnonymous: true,
-        tokenQuota: GUEST_QUOTA,
-        tokensUsed: 0,
-        requestCount: 0,
-        lastRequestAt: 0
-      };
-      setAppState(prev => ({
-        ...prev,
-        currentUser: anonymousUser,
-        ipRegistry: { ...prev.ipRegistry, [currentIp]: { ...currentStats, anonymousCount: currentStats.anonymousCount + 1, lastSeen: Date.now() } }
-      }));
     }
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('explicandum_token');
     setAppState(prev => ({ ...prev, currentUser: null, activeSessionId: null, status: 'idle' }));
   };
 
@@ -355,12 +447,15 @@ const App: React.FC = () => {
     setPendingFileIds([]);
 
     if (activeSession.personalLibraryEnabled) {
-      extractPhilosophicalStance(currentInput).then(stance => {
+      extractPhilosophicalStance(currentInput).then(async (stance) => {
         if (stance) {
-          setAppState(prev => ({
-            ...prev,
-            personalPhilosophyLibrary: [...prev.personalPhilosophyLibrary, { id: 'st_' + Date.now(), view: stance, sourceMessageId: userMsgId, timestamp: Date.now() }]
-          }));
+          const res = await createStance(stance, userMsgId);
+          if (res.id) {
+            setAppState(prev => ({
+              ...prev,
+              personalPhilosophyLibrary: [...prev.personalPhilosophyLibrary, { id: res.id, view: stance, sourceMessageId: userMsgId, timestamp: Date.now() }]
+            }));
+          }
         }
       });
     }
@@ -452,9 +547,26 @@ const App: React.FC = () => {
         </div>
 
         <button 
-          onClick={() => {
-            const newS: ChatSession = { id: 's_'+Date.now(), title: appState.language === 'zh' ? '新调查' : 'New Investigation', messages: [{ id: 'w', role: 'assistant', content: 'Final Answer: System ready.' }], createdAt: Date.now(), lastActive: Date.now(), personalLibraryEnabled: true, activeFileIds: [] };
-            setAppState(prev => ({ ...prev, sessions: [newS, ...prev.sessions], activeSessionId: newS.id, status: 'idle' }));
+          onClick={async () => {
+            const title = appState.language === 'zh' ? '新调查' : 'New Investigation';
+            // For temp users, also call backend API (temp users are now stored in backend)
+            const res = await createSession(title);
+            if (res.id) {
+              const newS: ChatSession = { 
+                id: res.id, 
+                title, 
+                messages: [{ id: 'w', role: 'assistant', content: 'Final Answer: System ready.' }], 
+                createdAt: Date.now(), 
+                lastActive: Date.now(), 
+                personalLibraryEnabled: true, 
+                activeFileIds: [] 
+              };
+              setAppState(prev => ({ ...prev, sessions: [newS, ...prev.sessions], activeSessionId: newS.id, status: 'idle' }));
+            } else {
+              // Handle API error
+              console.error('Failed to create session:', res);
+              alert('Failed to create session. Please check your connection and try again.');
+            }
           }} 
           className="w-full flex items-center justify-center gap-2 py-2 px-4 mb-6 rounded-xl bg-white text-zinc-900 hover:bg-zinc-100 transition-all border border-zinc-200 shadow-sm"
         >
@@ -629,7 +741,38 @@ const App: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      {appState.status === 'admin' ? (
+      {showUserManagement ? (
+        <UserManagement 
+          state={appState} 
+          language={appState.language} 
+          onClose={() => setShowUserManagement(false)} 
+          onUpdateUser={handleUpdateUser} 
+        />
+      ) : showAnalytics ? (
+        <AnalyticsPage 
+          state={appState} 
+          language={appState.language} 
+          onClose={() => setShowAnalytics(false)} 
+        />
+      ) : showSystemSettings ? (
+        <SystemSettingsPage 
+          state={appState} 
+          language={appState.language} 
+          onClose={() => setShowSystemSettings(false)} 
+        />
+      ) : showDataExport ? (
+        <DataExportPage 
+          state={appState} 
+          language={appState.language} 
+          onClose={() => setShowDataExport(false)} 
+        />
+      ) : showBackupRestore ? (
+        <BackupRestorePage 
+          state={appState} 
+          language={appState.language} 
+          onClose={() => setShowBackupRestore(false)} 
+        />
+      ) : appState.status === 'admin' ? (
         <AdminDashboard state={appState} language={appState.language} onClose={() => setAppState(prev => ({ ...prev, status: 'idle' }))} onUpdateUser={handleUpdateUser} />
       ) : appState.status === 'library' ? (
         <ThoughtLibrary state={appState} onClose={() => setAppState(prev => ({ ...prev, status: 'idle' }))} onDeleteStance={handleDeleteStance} />

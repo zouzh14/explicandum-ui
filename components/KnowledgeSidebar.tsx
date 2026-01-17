@@ -70,7 +70,17 @@ const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({ state, language, ac
           ))}
 
           {/* Section 2: Future Reference Cards (Mixed in) */}
-          <div className="p-3 bg-blue-50/30 border border-blue-100 rounded-xl grayscale opacity-60">
+          <div className="p-3 bg-blue-50/30 border border-blue-100 rounded-xl grayscale opacity-60 relative">
+            {/* 演示数据指示器 */}
+            <div className="absolute top-1 right-1 z-10">
+              <div className="flex items-center gap-1 px-1.5 py-0.5 bg-zinc-50 border border-zinc-100 rounded-full">
+                <div className="w-1 h-1 bg-orange-400 rounded-full animate-pulse" />
+                <span className="text-[8px] text-orange-600 font-medium">
+                  Demo
+                </span>
+              </div>
+            </div>
+            
             <div className="flex items-center gap-1.5 mb-2">
               <div className="w-1.5 h-1.5 bg-blue-400 rounded-full" />
               <span className="text-[9px] font-bold text-blue-600 uppercase tracking-tighter">{t.philosophicalRef}</span>

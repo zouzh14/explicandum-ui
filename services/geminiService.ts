@@ -42,6 +42,42 @@ export const deleteChatSession = async (sessionId: string): Promise<boolean> => 
   }
 };
 
+const getHeaders = () => {
+  const token = localStorage.getItem('explicandum_token');
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': token ? `Bearer ${token}` : ''
+  };
+};
+
+export const fetchSessions = async () => {
+  const response = await fetch(`${API_BASE_URL}/sessions`, { headers: getHeaders() });
+  return response.json();
+};
+
+export const createSession = async (title: string) => {
+  const response = await fetch(`${API_BASE_URL}/sessions`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ title })
+  });
+  return response.json();
+};
+
+export const fetchStances = async () => {
+  const response = await fetch(`${API_BASE_URL}/stances`, { headers: getHeaders() });
+  return response.json();
+};
+
+export const createStance = async (view: string, sourceMessageId: string) => {
+  const response = await fetch(`${API_BASE_URL}/stances`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ view, sourceMessageId })
+  });
+  return response.json();
+};
+
 export const streamExplicandumResponse = async (
   message: string,
   personalContext: string[],
@@ -52,7 +88,7 @@ export const streamExplicandumResponse = async (
   try {
     const response = await fetch(`${API_BASE_URL}/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getHeaders(),
       body: JSON.stringify({
         message,
         personalContext,

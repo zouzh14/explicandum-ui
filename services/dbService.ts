@@ -93,7 +93,7 @@ export const pgDb = {
       return u;
     });
 
-    const currentIpStats = state.ipRegistry[ip] || { anonymousCount: 0, lastSeen: Date.now(), totalTokensUsed: 0, totalRequests: 0 };
+    const currentIpStats = state.ipRegistry[ip] || { lastSeen: Date.now(), totalTokensUsed: 0, totalRequests: 0 };
     const updatedIpRegistry = {
       ...state.ipRegistry,
       [ip]: {
