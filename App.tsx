@@ -576,7 +576,7 @@ const App: React.FC = () => {
               const newS: ChatSession = { 
                 id: res.id, 
                 title, 
-                messages: [{ id: 'w', role: 'assistant', content: 'Final Answer: System ready.' }], 
+                messages: [{ id: 'w', role: 'assistant', content: 'Final Answer: Welcome to using the Explicandum system which to review philosophical drafts.' }], 
                 createdAt: Date.now(), 
                 lastActive: Date.now(), 
                 personalLibraryEnabled: true, 
