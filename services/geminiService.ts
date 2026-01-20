@@ -55,11 +55,11 @@ export const fetchSessions = async () => {
   return response.json();
 };
 
-export const createSession = async (title: string) => {
+export const createSession = async (title: string, mode: string = "CHAT") => {
   const response = await fetch(`${API_BASE_URL}/sessions`, {
     method: 'POST',
     headers: getHeaders(),
-    body: JSON.stringify({ title })
+    body: JSON.stringify({ title, mode })
   });
   return response.json();
 };
@@ -83,6 +83,7 @@ export const streamExplicandumResponse = async (
   personalContext: string[],
   retrievedChunks: VectorChunk[],
   threadId: string,
+  mode: string,
   onChunk: (text: string) => void
 ) => {
   try {
@@ -94,6 +95,7 @@ export const streamExplicandumResponse = async (
         personalContext,
         retrievedChunks,
         threadId,
+        mode,
         sessionHistory: [] // To be implemented if needed
       })
     });

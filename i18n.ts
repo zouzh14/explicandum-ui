@@ -42,6 +42,8 @@ export const translations = {
     agentInProgress: "Agent interaction in progress...",
     inputPlaceholder: "Analyze logical structure or philosophical background...",
     persistenceNode: "Persistence Node",
+    chatMode: "Chat",
+    paperReviewMode: "Paper Review",
     
     // Sidebar Right
     knowledgeWorkspace: "Knowledge Workspace",
@@ -125,6 +127,8 @@ export const translations = {
     agentInProgress: "智能体交互中...",
     inputPlaceholder: "分析逻辑结构或哲学背景...",
     persistenceNode: "持久化节点",
+    chatMode: "聊天模式",
+    paperReviewMode: "论文评审模式",
     
     // Sidebar Right
     knowledgeWorkspace: "知识工作区",

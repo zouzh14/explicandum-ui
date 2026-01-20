@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Message, ChatSession, User, AppState, PhilosophicalStance, FileAttachment, IpRegistry, VectorChunk } from './types';
+import { Message, ChatSession, User, AppState, PhilosophicalStance, FileAttachment, IpRegistry, VectorChunk, ChatMode } from './types';
 import { Icons } from './constants';
 import { translations } from './i18n';
 import { useAuth } from './contexts/AuthContext';
@@ -46,11 +46,11 @@ const App: React.FC = () => {
             rightSidebarOpen: parsed.rightSidebarOpen !== undefined ? !!parsed.rightSidebarOpen : true,
             leftToolsCollapsed: parsed.leftToolsCollapsed !== undefined ? !!parsed.leftToolsCollapsed : false,
             registeredUsers: Array.isArray(parsed.registeredUsers) ? parsed.registeredUsers : [],
-            sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
             personalPhilosophyLibrary: Array.isArray(parsed.personalPhilosophyLibrary) ? parsed.personalPhilosophyLibrary : [],
             fileLibrary: Array.isArray(parsed.fileLibrary) ? parsed.fileLibrary : [],
             vectorStore: Array.isArray(parsed.vectorStore) ? parsed.vectorStore : [],
-            ipRegistry: parsed.ipRegistry || {}
+            ipRegistry: parsed.ipRegistry || {},
+            sessions: (parsed.sessions || []).map((s: any) => ({ ...s, mode: s.mode || ChatMode.CHAT }))
           };
         }
       } catch (e) {
@@ -100,6 +100,7 @@ const App: React.FC = () => {
   const [isSendingCode, setIsSendingCode] = useState(false);
 
   const [input, setInput] = useState('');
+  const [activeMode, setActiveMode] = useState<ChatMode>(ChatMode.CHAT);
   const [ragEnabled, setRagEnabled] = useState(true);
   const [pendingFileIds, setPendingFileIds] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -136,7 +137,12 @@ const App: React.FC = () => {
     if (appState.currentUser) {
       // Sync sessions and stances from backend when logged in
       fetchSessions().then(data => {
-        if (Array.isArray(data)) setAppState(prev => ({ ...prev, sessions: data }));
+        if (Array.isArray(data)) {
+          setAppState(prev => ({ ...prev, sessions: data }));
+          // Sync active mode if there's an active session
+          const activeS = data.find(s => s.id === appState.activeSessionId);
+          if (activeS) setActiveMode(activeS.mode);
+        }
       });
       fetchStances().then(data => {
         if (Array.isArray(data)) setAppState(prev => ({ ...prev, personalPhilosophyLibrary: data }));
@@ -482,7 +488,7 @@ const App: React.FC = () => {
     }
 
     const personalContext = activeSession.personalLibraryEnabled ? appState.personalPhilosophyLibrary.map(s => s.view) : [];
-    await streamExplicandumResponse(currentInput, personalContext, retrievedChunks, activeSession.id, (chunk) => {
+    await streamExplicandumResponse(currentInput, personalContext, retrievedChunks, activeSession.id, activeMode, (chunk) => {
       setAppState(prev => ({
         ...prev,
         sessions: prev.sessions.map(s => s.id === prev.activeSessionId ? {
@@ -571,7 +577,7 @@ const App: React.FC = () => {
           onClick={async () => {
             const title = appState.language === 'zh' ? '新调查' : 'New Investigation';
             // For temp users, also call backend API (temp users are now stored in backend)
-            const res = await createSession(title);
+            const res = await createSession(title, activeMode);
             if (res.id) {
               const newS: ChatSession = { 
                 id: res.id, 
@@ -580,7 +586,8 @@ const App: React.FC = () => {
                 createdAt: Date.now(), 
                 lastActive: Date.now(), 
                 personalLibraryEnabled: true, 
-                activeFileIds: [] 
+                activeFileIds: [],
+                mode: activeMode
               };
               setAppState(prev => ({ ...prev, sessions: [newS, ...prev.sessions], activeSessionId: newS.id, status: 'idle' }));
             } else {
@@ -614,7 +621,10 @@ const App: React.FC = () => {
                     />
                   ) : (
                     <button 
-                      onClick={() => setAppState(prev => ({ ...prev, activeSessionId: s.id, status: 'idle' }))} 
+                      onClick={() => {
+                        setAppState(prev => ({ ...prev, activeSessionId: s.id, status: 'idle' }));
+                        setActiveMode(s.mode);
+                      }} 
                       className={`w-full flex items-center justify-between p-2.5 rounded-lg text-xs transition-all ${appState.activeSessionId === s.id && appState.status !== 'admin' ? 'bg-white text-zinc-900 shadow-sm border border-zinc-200' : 'text-zinc-500 hover:text-zinc-700'}`}
                     >
                       <div className="truncate flex-1 text-left">{s.title}</div>
@@ -869,6 +879,40 @@ const App: React.FC = () => {
                 <button onClick={() => fileInputRef.current?.click()} className="absolute left-3 top-1/2 -translate-y-1/2 p-2 text-zinc-400 hover:text-zinc-600"><Icons.Paperclip /></button>
                 <button onClick={handleSendMessage} disabled={!input.trim() || appState.status !== 'idle'} className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-xl transition-all ${input.trim() && appState.status === 'idle' ? 'bg-zinc-900 text-white shadow-lg' : 'bg-zinc-100 text-zinc-300 opacity-50'}`}><Icons.Send /></button>
               </div>
+              
+              <div className="flex items-center gap-2 mt-3">
+                <button
+                  onClick={() => {
+                    setActiveMode(ChatMode.CHAT);
+                    if (activeSession) {
+                      setAppState(prev => ({
+                        ...prev,
+                        sessions: prev.sessions.map(s => s.id === activeSession.id ? { ...s, mode: ChatMode.CHAT } : s)
+                      }));
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all border ${activeMode === ChatMode.CHAT ? 'bg-zinc-900 text-white border-zinc-900 shadow-sm' : 'bg-white text-zinc-500 border-zinc-200 hover:bg-zinc-50'}`}
+                >
+                  <Icons.Plus className="w-3 h-3" />
+                  {t.chatMode}
+                </button>
+                <button
+                  onClick={() => {
+                    setActiveMode(ChatMode.PAPER_REVIEW);
+                    if (activeSession) {
+                      setAppState(prev => ({
+                        ...prev,
+                        sessions: prev.sessions.map(s => s.id === activeSession.id ? { ...s, mode: ChatMode.PAPER_REVIEW } : s)
+                      }));
+                    }
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all border ${activeMode === ChatMode.PAPER_REVIEW ? 'bg-zinc-900 text-white border-zinc-900 shadow-sm' : 'bg-white text-zinc-500 border-zinc-200 hover:bg-zinc-50'}`}
+                >
+                  <Icons.Library className="w-3 h-3" />
+                  {t.paperReviewMode}
+                </button>
+              </div>
+
               <p className="text-center text-[8px] text-zinc-300 mt-4 uppercase tracking-[0.5em] font-bold">{t.persistenceNode} {currentIp}</p>
             </div>
           </div>

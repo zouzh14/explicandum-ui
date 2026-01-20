@@ -8,6 +8,11 @@ export enum AgentType {
   USER = 'USER'
 }
 
+export enum ChatMode {
+  CHAT = 'CHAT',
+  PAPER_REVIEW = 'PAPER_REVIEW'
+}
+
 export interface ThinkingStep {
   agent: AgentType;
   content: string;
@@ -76,6 +81,7 @@ export interface ChatSession {
   lastActive: number;
   personalLibraryEnabled: boolean;
   activeFileIds: string[];
+  mode: ChatMode;
 }
 
 export interface IpRegistry {
