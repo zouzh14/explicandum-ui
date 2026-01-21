@@ -21,10 +21,14 @@ const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({ state, language, ac
 
   return (
     <div className="w-80 h-full border-l border-zinc-200 bg-zinc-50 flex flex-col overflow-hidden animate-in slide-in-from-right duration-300">
-      <header className="p-4 border-b border-zinc-200 bg-white flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Icons.Library />
-          <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-900">{t.knowledgeWorkspace}</h2>
+      <header className="flex items-center justify-between p-4 border-b border-zinc-200 bg-white/80 backdrop-blur-md sticky top-0 z-20 min-h-[68px]">
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2">
+            <Icons.Library />
+            <h2 className="text-xs font-bold uppercase tracking-widest text-zinc-900">{t.knowledgeWorkspace}</h2>
+          </div>
+          {/* 空行用于高度匹配 */}
+          <div className="h-4"></div>
         </div>
         <button onClick={onClose} className="p-1 hover:bg-zinc-100 rounded transition-colors text-zinc-400">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
@@ -33,7 +37,7 @@ const KnowledgeSidebar: React.FC<KnowledgeSidebarProps> = ({ state, language, ac
         </button>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 py-10 custom-scrollbar space-y-4">
         <div className="flex items-center gap-2 mb-1 px-1">
           <Icons.Brain />
           <h3 className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">{t.contextualCards}</h3>

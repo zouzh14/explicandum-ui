@@ -26,9 +26,9 @@ import {
   createStance
 } from './services/geminiService';
 import { vectorStore, pgDb } from './services/dbService';
+import authService from './services/authService';
 
 const DEFAULT_QUOTA = 100000;
-const API_BASE_URL = "http://localhost:8000";
 
 const App: React.FC = () => {
   const { state: authState, dispatch } = useAuth();
@@ -213,20 +213,15 @@ const App: React.FC = () => {
     }
     setIsSendingCode(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/send-code`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-      const data = await res.json();
-      if (data.status === 'success') {
+      const response = await authService.sendVerificationCode(email);
+      if (response.status === 'success') {
         setCountdown(60);
         setAuthError('');
       } else {
-        setAuthError(data.message);
+        setAuthError(response.message);
       }
-    } catch (e) {
-      setAuthError('Failed to connect to auth server');
+    } catch (error: any) {
+      setAuthError(error.message || 'Failed to connect to auth server');
     } finally {
       setIsSendingCode(false);
     }
@@ -236,119 +231,69 @@ const App: React.FC = () => {
     setAuthError('');
     dispatch({ type: 'LOGIN_START' });
     
-    if (authMode === 'login') {
-      try {
-        const res = await fetch(`${API_BASE_URL}/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
-        });
+    try {
+      if (authMode === 'login') {
+        const response = await authService.login({ username, password });
         
-        // Check if response is OK
-        if (!res.ok) {
-          // Try to parse error response
-          try {
-            const errorData = await res.json();
-            setAuthError(errorData.detail || `Login failed (${res.status})`);
-          } catch {
-            setAuthError(`Login failed: ${res.status} ${res.statusText}`);
-          }
-          dispatch({ type: 'LOGIN_FAILURE', error: authError });
-          return;
-        }
-        
-        const data = await res.json();
-        dispatch({ type: 'LOGIN_SUCCESS', user: data.user, token: data.access_token });
-        setAppState(prev => ({ ...prev, currentUser: data.user }));
-      } catch (e) {
-        // Network error or other exception
-        console.error('Login error:', e);
-        const errorMsg = 'Cannot connect to server. Please check your network connection.';
-        setAuthError(errorMsg);
-        dispatch({ type: 'LOGIN_FAILURE', error: errorMsg });
-      }
-    } else if (authMode === 'register') {
-      if (!username || !password || !email || !verificationCode) {
-        const errorMsg = 'All fields required for registration';
-        setAuthError(errorMsg);
-        dispatch({ type: 'LOGIN_FAILURE', error: errorMsg });
-        return;
-      }
-      
-      try {
-        const res = await fetch(`${API_BASE_URL}/auth/verify-register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, code: verificationCode, username, password })
-        });
-        
-        // Check if response is OK
-        if (!res.ok) {
-          // Try to parse error response
-          try {
-            const errorData = await res.json();
-            setAuthError(errorData.message || `Registration failed (${res.status})`);
-          } catch {
-            setAuthError(`Registration failed: ${res.status} ${res.statusText}`);
-          }
-          dispatch({ type: 'LOGIN_FAILURE', error: authError });
-          return;
-        }
-        
-        const data = await res.json();
-        
-        if (data.status === 'success') {
-          dispatch({ type: 'LOGIN_SUCCESS', user: data.user, token: data.access_token });
-          setAppState(prev => ({ ...prev, currentUser: data.user }));
+        if (response.status === 'success') {
+          dispatch({ type: 'LOGIN_SUCCESS', user: response.data.user, token: response.data.access_token });
+          setAppState(prev => ({ ...prev, currentUser: response.data.user }));
         } else {
-          const errorMsg = data.message || 'Registration failed';
+          const errorMsg = response.message || 'Login failed';
           setAuthError(errorMsg);
           dispatch({ type: 'LOGIN_FAILURE', error: errorMsg });
         }
-      } catch (e) {
-        // Network error or other exception
-        console.error('Registration error:', e);
-        const errorMsg = 'Cannot connect to server. Please check your network connection and try again.';
-        setAuthError(errorMsg);
-        dispatch({ type: 'LOGIN_FAILURE', error: errorMsg });
-      }
-    } else if (authMode === 'guest') {
-      // 创建临时用户
-      try {
-        const res = await fetch(`${API_BASE_URL}/auth/create-temp`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ registration_ip: currentIp })
-        });
-        
-        if (!res.ok) {
-          const errorData = await res.json();
-          const errorMsg = errorData.message || `Failed to create temporary user (${res.status})`;
+      } else if (authMode === 'register') {
+        if (!username || !password || !email || !verificationCode) {
+          const errorMsg = 'All fields required for registration';
           setAuthError(errorMsg);
           dispatch({ type: 'LOGIN_FAILURE', error: errorMsg });
           return;
         }
         
-        const data = await res.json();
+        const response = await authService.register({ email, code: verificationCode, username, password });
         
-        if (data.status === 'success') {
-          dispatch({ type: 'LOGIN_SUCCESS', user: data.user, token: data.access_token });
-          setAppState(prev => ({ ...prev, currentUser: data.user }));
+        if (response.status === 'success') {
+          // Handle both response structures: data.user or user
+          const user = response.data?.user || response.user;
+          const token = response.data?.access_token || response.access_token;
+          if (user && token) {
+            dispatch({ type: 'LOGIN_SUCCESS', user, token });
+            setAppState(prev => ({ ...prev, currentUser: user }));
+          } else {
+            const errorMsg = response.message || 'Registration failed - missing user data';
+            setAuthError(errorMsg);
+            dispatch({ type: 'LOGIN_FAILURE', error: errorMsg });
+          }
         } else {
-          const errorMsg = data.message || 'Failed to create temporary user';
+          const errorMsg = response.message || 'Registration failed';
           setAuthError(errorMsg);
           dispatch({ type: 'LOGIN_FAILURE', error: errorMsg });
         }
-      } catch (e) {
-        console.error('Temp user creation error:', e);
-        const errorMsg = 'Cannot connect to server. Please check your network connection.';
-        setAuthError(errorMsg);
-        dispatch({ type: 'LOGIN_FAILURE', error: errorMsg });
+      } else if (authMode === 'guest') {
+        // 创建临时用户
+        const response = await authService.createTempUser(currentIp);
+        
+        if (response.status === 'success') {
+          dispatch({ type: 'LOGIN_SUCCESS', user: response.user, token: response.access_token });
+          setAppState(prev => ({ ...prev, currentUser: response.user }));
+        } else {
+          const errorMsg = response.message || 'Failed to create temporary user';
+          setAuthError(errorMsg);
+          dispatch({ type: 'LOGIN_FAILURE', error: errorMsg });
+        }
       }
+    } catch (error: any) {
+      // Network error or other exception
+      console.error('Authentication error:', error);
+      const errorMsg = error.message || 'Cannot connect to server. Please check your network connection.';
+      setAuthError(errorMsg);
+      dispatch({ type: 'LOGIN_FAILURE', error: errorMsg });
     }
   };
 
   const handleLogout = () => {
+    authService.logout();
     dispatch({ type: 'LOGOUT' });
     setAppState(prev => ({ ...prev, currentUser: null, activeSessionId: null, status: 'idle' }));
   };
