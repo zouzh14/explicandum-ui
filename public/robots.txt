@@ -1,0 +1,24 @@
+# Explicandum - An AI-powered Philosophy Analysis Assistant
+# Supporting the Stanford Encyclopedia of Philosophy (SEP)
+
+# 1. AI Search and LLM Bots
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: PerplexityBot
+User-agent: ClaudeBot
+Allow: /articles/
+Allow: /blog/
+Disallow: /api/
+Disallow: /chat/
+Disallow: /admin/
+
+# 2. General Search Engines
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /config/
+Disallow: /search
+
+# 3. Sitemap
+Sitemap: https://explicandum.org/sitemap.xml
